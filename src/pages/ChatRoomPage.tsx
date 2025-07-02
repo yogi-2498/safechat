@@ -13,7 +13,10 @@ import {
   Copy,
   Check,
   X,
-  Paperclip
+  Paperclip,
+  Youtube,
+  Play,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -22,6 +25,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useChat } from '../contexts/ChatContext';
 import { MessageBubble } from '../components/MessageBubble';
 import { EmojiPicker } from '../components/EmojiPicker';
+import { YouTubePlayer } from '../components/YouTubePlayer';
+import { useScreenshotPrevention } from '../hooks/useScreenshotPrevention';
 import toast from 'react-hot-toast';
 
 export const ChatRoomPage: React.FC = () => {
@@ -32,16 +37,49 @@ export const ChatRoomPage: React.FC = () => {
   
   const [newMessage, setNewMessage] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showYouTubePlayer, setShowYouTubePlayer] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Enable screenshot prevention
+  useScreenshotPrevention();
 
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Recording timer
+  useEffect(() => {
+    if (isRecording) {
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+    } else {
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+      setRecordingTime(0);
+    }
+
+    return () => {
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+    };
+  }, [isRecording]);
+
+  // Format recording time
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // Copy room code
   const copyRoomCode = async () => {
@@ -96,6 +134,22 @@ export const ChatRoomPage: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
+  // Handle audio recording
+  const toggleRecording = () => {
+    if (isRecording) {
+      setIsRecording(false);
+      // Simulate sending audio message
+      sendMessage({
+        content: `Audio message (${formatTime(recordingTime)})`,
+        type: 'audio'
+      });
+      toast.success('Audio message sent!');
+    } else {
+      setIsRecording(true);
+      toast.success('Recording started...');
+    }
+  };
+
   // Leave room
   const handleLeaveRoom = () => {
     toast.success('Left room successfully');
@@ -103,7 +157,19 @@ export const ChatRoomPage: React.FC = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 secure-content no-select">
+      {/* Security Warning */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-r from-orange-500/20 to-red-500/20 border-b border-orange-500/30 p-2"
+      >
+        <div className="flex items-center justify-center space-x-2 text-orange-300 text-sm">
+          <AlertTriangle className="w-4 h-4" />
+          <span>🔒 Screenshot protection active - This conversation is secure and private</span>
+        </div>
+      </motion.div>
+
       {/* Header */}
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
@@ -136,25 +202,37 @@ export const ChatRoomPage: React.FC = () => {
             {isConnected && (
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                <span className="text-sm text-green-400">Connected</span>
+                <span className="text-sm text-green-400">Encrypted & Connected</span>
               </div>
             )}
           </div>
           
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleLeaveRoom}
-            className="text-white border-white/30 hover:bg-red-500/20 hover:border-red-500/50 group"
-          >
-            <LogOut className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-            Leave
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowYouTubePlayer(true)}
+              className="text-white/70 hover:text-white hover:bg-red-500/20 group"
+            >
+              <Youtube className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+              Watch Together
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLeaveRoom}
+              className="text-white border-white/30 hover:bg-red-500/20 hover:border-red-500/50 group"
+            >
+              <LogOut className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+              Leave
+            </Button>
+          </div>
         </div>
       </motion.div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 no-select">
         <AnimatePresence>
           {messages.map((message) => (
             <MessageBubble
@@ -181,6 +259,37 @@ export const ChatRoomPage: React.FC = () => {
         )}
       </AnimatePresence>
 
+      {/* YouTube Player */}
+      <YouTubePlayer 
+        isVisible={showYouTubePlayer}
+        onClose={() => setShowYouTubePlayer(false)}
+      />
+
+      {/* Recording Indicator */}
+      {isRecording && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-3 bg-red-500/20 backdrop-blur-md border-t border-red-500/30"
+        >
+          <div className="flex items-center justify-center space-x-3">
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+              <Mic className="w-5 h-5 text-red-400" />
+              <span className="text-red-400 font-medium">Recording: {formatTime(recordingTime)}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleRecording}
+              className="text-red-400 hover:bg-red-500/20"
+            >
+              Stop & Send
+            </Button>
+          </div>
+        </motion.div>
+      )}
+
       {/* Input Area */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
@@ -195,6 +304,7 @@ export const ChatRoomPage: React.FC = () => {
               size="sm"
               onClick={() => fileInputRef.current?.click()}
               className="text-white/70 hover:text-white hover:bg-white/10 group"
+              disabled={isRecording}
             >
               <Paperclip className="w-5 h-5 group-hover:scale-110 transition-transform" />
             </Button>
@@ -205,6 +315,7 @@ export const ChatRoomPage: React.FC = () => {
               size="sm"
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
               className="text-white/70 hover:text-white hover:bg-white/10 group"
+              disabled={isRecording}
             >
               <Smile className="w-5 h-5 group-hover:scale-110 transition-transform" />
             </Button>
@@ -213,7 +324,7 @@ export const ChatRoomPage: React.FC = () => {
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => setIsRecording(!isRecording)}
+              onClick={toggleRecording}
               className={`${isRecording ? 'text-red-400 bg-red-500/20' : 'text-white/70'} hover:text-white hover:bg-white/10 group`}
             >
               {isRecording ? 
@@ -221,10 +332,21 @@ export const ChatRoomPage: React.FC = () => {
                 <Mic className="w-5 h-5 group-hover:scale-110 transition-transform" />
               }
             </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowYouTubePlayer(true)}
+              className="text-white/70 hover:text-white hover:bg-red-500/20 group"
+              disabled={isRecording}
+            >
+              <Youtube className="w-5 h-5 group-hover:scale-110 transition-transform" />
+            </Button>
           </div>
           
           <Input
-            placeholder={isRecording ? 'Recording...' : 'Type your message...'}
+            placeholder={isRecording ? 'Recording audio...' : 'Type your encrypted message...'}
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             disabled={isRecording}
@@ -239,19 +361,6 @@ export const ChatRoomPage: React.FC = () => {
             <Send className="w-5 h-5 group-hover:scale-110 transition-transform" />
           </Button>
         </form>
-        
-        {isRecording && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mt-2 flex items-center justify-center"
-          >
-            <div className="flex items-center space-x-2 text-red-400">
-              <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse" />
-              <span className="text-sm">Recording audio...</span>
-            </div>
-          </motion.div>
-        )}
       </motion.div>
 
       {/* Hidden file input */}

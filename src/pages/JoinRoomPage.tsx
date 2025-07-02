@@ -1,45 +1,38 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Users, LogOut, Shield, Copy, Check, AlertCircle } from 'lucide-react';
+import { Plus, Users, LogOut, Shield, Copy, Check, AlertCircle, Youtube } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { RoomValidationService } from '../services/RoomValidationService';
 import toast from 'react-hot-toast';
 
 export const JoinRoomPage: React.FC = () => {
   const [roomCode, setRoomCode] = useState('');
   const [isJoining, setIsJoining] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [validationError, setValidationError] = useState('');
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
-  // Predefined valid room codes for demo (in production, this would be a server check)
-  const validRoomCodes = ['ABC123', 'TEST01', 'DEMO99', 'SECURE', 'CHAT01'];
-
-  const generateRoomCode = (): string => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let result = '';
-    for (let i = 0; i < 6; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-  };
-
   const createRoom = async () => {
     setIsCreating(true);
-    const newRoomCode = generateRoomCode();
-    
-    // Add the new room code to valid codes (simulate server creation)
-    validRoomCodes.push(newRoomCode);
     
     try {
-      await copyToClipboard(newRoomCode);
+      const newRoomCode = RoomValidationService.generateRoomCode();
+      
+      // Add the new room to valid rooms
+      RoomValidationService.addRoomCode(newRoomCode);
+      
+      // Copy to clipboard
+      await navigator.clipboard.writeText(newRoomCode);
+      
+      // Navigate to room
       setTimeout(() => {
         navigate(`/room/${newRoomCode}`);
-        toast.success(`Room created: ${newRoomCode} (copied to clipboard)`);
+        toast.success(`🎉 Room created: ${newRoomCode} (copied to clipboard)`);
         setIsCreating(false);
       }, 1000);
     } catch (error) {
@@ -48,42 +41,52 @@ export const JoinRoomPage: React.FC = () => {
     }
   };
 
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      throw new Error('Failed to copy to clipboard');
-    }
-  };
-
-  const validateRoomCode = (code: string): boolean => {
-    // Room code must be exactly 6 characters, alphanumeric
-    return /^[A-Z0-9]{6}$/.test(code);
-  };
-
   const joinRoom = async () => {
-    const upperRoomCode = roomCode.toUpperCase();
-    
-    if (!validateRoomCode(upperRoomCode)) {
-      toast.error('Invalid room code format. Must be exactly 6 characters (letters and numbers only)');
+    if (!roomCode.trim()) {
+      setValidationError('Please enter a room code');
       return;
     }
 
     setIsJoining(true);
+    setValidationError('');
     
-    // Simulate server room validation with delay
-    setTimeout(() => {
-      // Check if room exists in our valid rooms list
-      if (validRoomCodes.includes(upperRoomCode)) {
-        navigate(`/room/${upperRoomCode}`);
-        toast.success(`Joining room ${upperRoomCode}`);
-      } else {
-        toast.error(`Room "${upperRoomCode}" not found. Please check the code and try again.`);
+    try {
+      // Validate room code
+      const validation = await RoomValidationService.validateRoom(roomCode);
+      
+      if (!validation.valid) {
+        setValidationError(validation.message);
+        toast.error(validation.message);
+        setIsJoining(false);
+        return;
       }
+
+      // Check room capacity
+      const capacity = await RoomValidationService.checkRoomCapacity(roomCode);
+      
+      if (!capacity.canJoin) {
+        setValidationError('Room is full (maximum 2 users)');
+        toast.error('Room is full. Please try another room.');
+        setIsJoining(false);
+        return;
+      }
+
+      // Success - navigate to room
+      navigate(`/room/${roomCode.toUpperCase()}`);
+      toast.success(`🔐 Joining secure room ${roomCode.toUpperCase()}`);
+      
+    } catch (error) {
+      setValidationError('Failed to validate room. Please try again.');
+      toast.error('Connection error. Please try again.');
+    } finally {
       setIsJoining(false);
-    }, 1500); // Longer delay to simulate real server check
+    }
+  };
+
+  const handleRoomCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.toUpperCase();
+    setRoomCode(value);
+    setValidationError('');
   };
 
   const handleSignOut = async () => {
@@ -168,7 +171,7 @@ export const JoinRoomPage: React.FC = () => {
             </h1>
             <p className="text-xl lg:text-2xl text-white/80 max-w-3xl mx-auto leading-relaxed">
               Create a new private room or join an existing one with a valid room code. 
-              Your conversations are end-to-end encrypted and completely private.
+              Features screenshot protection, YouTube watch parties, and end-to-end encryption.
             </p>
           </motion.div>
 
@@ -197,9 +200,24 @@ export const JoinRoomPage: React.FC = () => {
                   </div>
                   
                   <p className="text-white/80 mb-8 text-lg leading-relaxed">
-                    Start a new secure conversation. A unique 6-character room code will be generated 
-                    and automatically copied to your clipboard to share with one other person.
+                    Start a new secure conversation with screenshot protection and YouTube integration. 
+                    A unique 6-character room code will be generated and copied to your clipboard.
                   </p>
+                  
+                  <div className="space-y-4 mb-6">
+                    <div className="flex items-center space-x-3 text-green-300">
+                      <Shield className="w-5 h-5" />
+                      <span>End-to-end encryption enabled</span>
+                    </div>
+                    <div className="flex items-center space-x-3 text-green-300">
+                      <Youtube className="w-5 h-5" />
+                      <span>YouTube watch party support</span>
+                    </div>
+                    <div className="flex items-center space-x-3 text-green-300">
+                      <AlertCircle className="w-5 h-5" />
+                      <span>Screenshot protection active</span>
+                    </div>
+                  </div>
                   
                   <Button 
                     onClick={createRoom} 
@@ -208,7 +226,7 @@ export const JoinRoomPage: React.FC = () => {
                     isLoading={isCreating}
                   >
                     <Plus className="w-6 h-6 mr-3 group-hover:rotate-90 transition-transform duration-300" />
-                    {isCreating ? 'Creating Room...' : 'Create & Copy Code'}
+                    {isCreating ? 'Creating Secure Room...' : 'Create & Copy Code'}
                   </Button>
                 </div>
               </Card>
@@ -238,8 +256,8 @@ export const JoinRoomPage: React.FC = () => {
                   </div>
                   
                   <p className="text-white/80 mb-8 text-lg leading-relaxed">
-                    Enter a valid 6-character room code shared with you to join 
-                    an existing secure conversation. Invalid codes will be rejected.
+                    Enter a valid 6-character room code to join an existing secure conversation. 
+                    Invalid or non-existent codes will be rejected for security.
                   </p>
                   
                   <div className="space-y-6">
@@ -247,18 +265,30 @@ export const JoinRoomPage: React.FC = () => {
                       <Input
                         placeholder="Enter room code (e.g., ABC123)"
                         value={roomCode}
-                        onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                        onChange={handleRoomCodeChange}
                         maxLength={6}
-                        className="bg-white/10 border-white/30 text-white placeholder-white/50 text-center text-xl tracking-[0.3em] font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 py-4"
+                        className={`bg-white/10 border-white/30 text-white placeholder-white/50 text-center text-xl tracking-[0.3em] font-mono focus:ring-2 focus:border-blue-500 transition-all duration-300 py-4 ${
+                          validationError ? 'border-red-500/50 focus:ring-red-500' : 'focus:ring-blue-500'
+                        }`}
                       />
-                      {roomCode && !validateRoomCode(roomCode) && (
+                      {validationError && (
                         <motion.div 
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="absolute -bottom-6 left-0 flex items-center text-red-400 text-sm"
+                          className="absolute -bottom-8 left-0 flex items-center text-red-400 text-sm"
                         >
                           <AlertCircle className="w-4 h-4 mr-1" />
-                          Must be exactly 6 characters
+                          {validationError}
+                        </motion.div>
+                      )}
+                      {roomCode && !validationError && RoomValidationService.validateFormat(roomCode) && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="absolute -bottom-8 left-0 flex items-center text-green-400 text-sm"
+                        >
+                          <Check className="w-4 h-4 mr-1" />
+                          Valid format
                         </motion.div>
                       )}
                     </div>
@@ -268,10 +298,10 @@ export const JoinRoomPage: React.FC = () => {
                       className="w-full bg-gradient-to-r from-blue-500 via-cyan-500 to-indigo-500 hover:from-blue-600 hover:via-cyan-600 hover:to-indigo-600 text-white font-semibold py-4 text-lg shadow-2xl hover:shadow-blue-500/25 group" 
                       size="lg"
                       isLoading={isJoining}
-                      disabled={!roomCode.trim() || !validateRoomCode(roomCode)}
+                      disabled={!roomCode.trim() || !RoomValidationService.validateFormat(roomCode)}
                     >
                       <Users className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform duration-300" />
-                      {isJoining ? 'Validating Room...' : 'Join Room'}
+                      {isJoining ? 'Validating Room...' : 'Join Secure Room'}
                     </Button>
                   </div>
                 </div>
@@ -290,17 +320,20 @@ export const JoinRoomPage: React.FC = () => {
               <div className="text-center">
                 <h3 className="text-xl font-bold text-white mb-3">Demo Room Codes (for testing)</h3>
                 <div className="flex flex-wrap justify-center gap-3">
-                  {validRoomCodes.slice(0, 5).map((code) => (
-                    <span 
+                  {RoomValidationService.getValidCodes().slice(0, 5).map((code) => (
+                    <motion.button
                       key={code}
-                      className="px-4 py-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 text-white font-mono tracking-wider"
+                      onClick={() => setRoomCode(code)}
+                      className="px-4 py-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 text-white font-mono tracking-wider hover:bg-white/20 transition-colors"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                     >
                       {code}
-                    </span>
+                    </motion.button>
                   ))}
                 </div>
                 <p className="text-white/70 text-sm mt-3">
-                  Try entering one of these codes to test room validation
+                  Click any code above to test room validation, or create your own room
                 </p>
               </div>
             </Card>
@@ -311,26 +344,32 @@ export const JoinRoomPage: React.FC = () => {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.8 }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16"
+            className="grid grid-cols-1 md:grid-cols-4 gap-8 mt-16"
           >
             {[
               { 
                 icon: Shield, 
-                title: 'End-to-End Encrypted', 
+                title: 'E2E Encrypted', 
                 desc: 'Military-grade AES-256 encryption',
                 gradient: 'from-purple-500 to-pink-500'
               },
               { 
-                icon: Users, 
-                title: 'Validated Room Access', 
-                desc: 'Only valid room codes are accepted',
-                gradient: 'from-blue-500 to-cyan-500'
+                icon: AlertCircle, 
+                title: 'Screenshot Protected', 
+                desc: 'Advanced screenshot prevention',
+                gradient: 'from-orange-500 to-red-500'
               },
               { 
-                icon: Copy, 
-                title: 'Easy Code Sharing', 
-                desc: 'Auto-copy generated room codes',
-                gradient: 'from-green-500 to-emerald-500'
+                icon: Youtube, 
+                title: 'Watch Together', 
+                desc: 'Synchronized YouTube viewing',
+                gradient: 'from-red-500 to-pink-500'
+              },
+              { 
+                icon: Users, 
+                title: 'Validated Access', 
+                desc: 'Strict room code validation',
+                gradient: 'from-blue-500 to-cyan-500'
               }
             ].map((feature, index) => (
               <motion.div
@@ -338,15 +377,15 @@ export const JoinRoomPage: React.FC = () => {
                 whileHover={{ y: -5 }}
                 transition={{ duration: 0.3 }}
               >
-                <Card className="p-8 text-center bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border border-white/20 hover:from-white/15 hover:to-white/10 transition-all duration-500 group h-full">
+                <Card className="p-6 text-center bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border border-white/20 hover:from-white/15 hover:to-white/10 transition-all duration-500 group h-full">
                   <motion.div
-                    className={`w-16 h-16 bg-gradient-to-r ${feature.gradient} rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300 shadow-2xl`}
+                    className={`w-14 h-14 bg-gradient-to-r ${feature.gradient} rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-2xl`}
                     whileHover={{ rotate: 10 }}
                   >
-                    <feature.icon className="w-8 h-8 text-white" />
+                    <feature.icon className="w-7 h-7 text-white" />
                   </motion.div>
-                  <h3 className="font-bold text-white mb-3 text-xl">{feature.title}</h3>
-                  <p className="text-white/70 leading-relaxed">{feature.desc}</p>
+                  <h3 className="font-bold text-white mb-2 text-lg">{feature.title}</h3>
+                  <p className="text-white/70 text-sm leading-relaxed">{feature.desc}</p>
                 </Card>
               </motion.div>
             ))}
