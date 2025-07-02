@@ -1,5 +1,5 @@
 {
-  "name": "secure-private-chat",
+  "name": "secure-chat-app",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,15 +10,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "lucide-react": "^0.344.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "@supabase/supabase-js": "^2.39.0",
     "react-router-dom": "^6.20.1",
-    "react-markdown": "^9.0.1",
-    "emoji-picker-react": "^4.7.12",
+    "lucide-react": "^0.344.0",
+    "framer-motion": "^10.16.16",
     "react-hot-toast": "^2.4.1",
-    "framer-motion": "^10.16.16"
+    "@supabase/supabase-js": "^2.39.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",

@@ -2,20 +2,17 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { ThemeProvider } from './contexts/ThemeContext';
-import { LandingPage } from './components/LandingPage';
-import { Dashboard } from './components/Dashboard';
-import { ChatRoom } from './components/ChatRoom';
+import { ChatProvider } from './contexts/ChatContext';
+import { HomePage } from './pages/HomePage';
+import { JoinRoomPage } from './pages/JoinRoomPage';
+import { ChatRoomPage } from './pages/ChatRoomPage';
+import { LoadingSpinner } from './components/LoadingSpinner';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
   
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <LoadingSpinner />;
   }
   
   return user ? <>{children}</> : <Navigate to="/" replace />;
@@ -25,24 +22,20 @@ const AppContent: React.FC = () => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
     <Routes>
       <Route 
         path="/" 
-        element={user ? <Navigate to="/dashboard" replace /> : <LandingPage />} 
+        element={user ? <Navigate to="/join" replace /> : <HomePage />} 
       />
       <Route 
-        path="/dashboard" 
+        path="/join" 
         element={
           <ProtectedRoute>
-            <Dashboard />
+            <JoinRoomPage />
           </ProtectedRoute>
         } 
       />
@@ -50,7 +43,9 @@ const AppContent: React.FC = () => {
         path="/room/:roomCode" 
         element={
           <ProtectedRoute>
-            <ChatRoom />
+            <ChatProvider>
+              <ChatRoomPage />
+            </ChatProvider>
           </ProtectedRoute>
         } 
       />
@@ -60,27 +55,25 @@ const AppContent: React.FC = () => {
 
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <Router>
-          <div className="min-h-screen">
-            <AppContent />
-            <Toaster
-              position="top-right"
-              toastOptions={{
-                duration: 4000,
-                style: {
-                  background: 'rgba(0, 0, 0, 0.8)',
-                  color: '#fff',
-                  backdropFilter: 'blur(8px)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                },
-              }}
-            />
-          </div>
-        </Router>
-      </AuthProvider>
-    </ThemeProvider>
+    <AuthProvider>
+      <Router>
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+          <AppContent />
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 4000,
+              style: {
+                background: 'rgba(0, 0, 0, 0.8)',
+                color: '#fff',
+                backdropFilter: 'blur(8px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+              },
+            }}
+          />
+        </div>
+      </Router>
+    </AuthProvider>
   );
 }
 

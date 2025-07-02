@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { supabase } from '../lib/supabase';
 
 interface User {
   id: string;
@@ -8,14 +7,8 @@ interface User {
   avatar_url?: string;
 }
 
-interface Session {
-  user: User;
-  access_token: string;
-}
-
 interface AuthContextType {
   user: User | null;
-  session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -39,60 +32,58 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    // Check for existing session
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+    setLoading(false);
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) throw error;
+    // Mock authentication
+    if (email && password) {
+      const user: User = {
+        id: Math.random().toString(36).substr(2, 9),
+        email: email,
+        name: email.split('@')[0]
+      };
+      
+      setUser(user);
+      localStorage.setItem('user', JSON.stringify(user));
+    } else {
+      throw new Error('Invalid credentials');
+    }
   };
 
   const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-    });
-    if (error) throw error;
+    // Mock Google OAuth
+    const mockGoogleUser: User = {
+      id: Math.random().toString(36).substr(2, 9),
+      email: 'user@gmail.com',
+      name: 'Google User',
+      avatar_url: 'https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1'
+    };
+    
+    setUser(mockGoogleUser);
+    localStorage.setItem('user', JSON.stringify(mockGoogleUser));
   };
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-    if (error) throw error;
+    // Mock sign up - same as sign in for demo
+    return signIn(email, password);
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    setUser(null);
+    localStorage.removeItem('user');
   };
 
   const value = {
     user,
-    session,
     loading,
     signIn,
     signInWithGoogle,
