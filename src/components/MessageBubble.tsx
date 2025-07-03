@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Download, Play, Pause } from 'lucide-react';
+import { Download, Play, Pause, ImageIcon } from 'lucide-react';
 import { Message } from '../types';
+import { ImageLightbox } from './ImageLightbox';
 
 interface MessageBubbleProps {
   message: Message;
@@ -9,6 +10,8 @@ interface MessageBubbleProps {
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMessage }) => {
+  const [showLightbox, setShowLightbox] = useState(false);
+
   const formatTime = (timestamp: string) => {
     return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
@@ -22,31 +25,95 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMess
       
       case 'image':
         return (
-          <div>
-            <img 
-              src={message.fileUrl} 
-              alt={message.fileName}
-              className="rounded-lg max-w-full h-auto mb-2 max-h-64 object-cover"
+          <div className="group">
+            <motion.div
+              className="relative cursor-pointer overflow-hidden rounded-lg"
+              whileHover={{ scale: 1.02 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setShowLightbox(true)}
+            >
+              <img 
+                src={message.fileUrl} 
+                alt={message.fileName}
+                className="rounded-lg max-w-full h-auto mb-2 max-h-64 object-cover transition-all duration-300 group-hover:brightness-110"
+              />
+              
+              {/* Hover overlay */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                whileHover={{ opacity: 1 }}
+                className="absolute inset-0 bg-black/30 backdrop-blur-[1px] flex items-center justify-center rounded-lg"
+              >
+                <motion.div
+                  initial={{ scale: 0.8 }}
+                  whileHover={{ scale: 1 }}
+                  className="bg-white/20 backdrop-blur-md rounded-full p-3 border border-white/30"
+                >
+                  <ImageIcon className="w-6 h-6 text-white" />
+                </motion.div>
+              </motion.div>
+              
+              {/* Click indicator */}
+              <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-md text-white text-xs px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                Click to view
+              </div>
+            </motion.div>
+            
+            <p className="text-xs opacity-70 mt-1">{message.fileName}</p>
+            
+            {/* Image Lightbox */}
+            <ImageLightbox
+              isOpen={showLightbox}
+              imageUrl={message.fileUrl!}
+              imageName={message.fileName}
+              onClose={() => setShowLightbox(false)}
             />
-            <p className="text-xs opacity-70">{message.fileName}</p>
           </div>
         );
       
       case 'file':
         return (
-          <div className="flex items-center space-x-2">
-            <Download className="w-4 h-4" />
-            <div>
-              <p className="text-sm font-medium">{message.fileName}</p>
+          <motion.div 
+            className="flex items-center space-x-3 p-3 bg-white/10 rounded-lg border border-white/20 hover:bg-white/15 transition-colors cursor-pointer group"
+            whileHover={{ scale: 1.02 }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className="p-2 bg-blue-500/20 rounded-lg group-hover:bg-blue-500/30 transition-colors">
+              <Download className="w-5 h-5 text-blue-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{message.fileName}</p>
               <a 
                 href={message.fileUrl}
                 download={message.fileName}
-                className="text-xs opacity-70 hover:opacity-100 underline"
+                className="text-xs text-blue-400 hover:text-blue-300 underline"
+                onClick={(e) => e.stopPropagation()}
               >
-                Download
+                Download file
               </a>
             </div>
-          </div>
+          </motion.div>
+        );
+      
+      case 'audio':
+        return (
+          <motion.div 
+            className="flex items-center space-x-3 p-3 bg-white/10 rounded-lg border border-white/20 hover:bg-white/15 transition-colors group"
+            whileHover={{ scale: 1.02 }}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="p-2 bg-green-500/20 rounded-lg group-hover:bg-green-500/30 transition-colors"
+            >
+              <Play className="w-5 h-5 text-green-400" />
+            </motion.button>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-white">{message.content}</p>
+              <p className="text-xs text-white/60">Audio message</p>
+            </div>
+          </motion.div>
         );
       
       default:
@@ -62,25 +129,50 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMess
       className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-4`}
     >
       <motion.div 
-        className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl relative overflow-hidden ${
+        className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl relative overflow-hidden group ${
           isOwnMessage 
             ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white' 
             : 'bg-white/10 backdrop-blur-md text-white border border-white/20'
         }`}
-        whileHover={{ scale: 1.02 }}
+        whileHover={{ scale: 1.02, y: -2 }}
         transition={{ duration: 0.2 }}
       >
-        {/* Bubble effect on hover */}
+        {/* Enhanced bubble effect on hover */}
         <motion.div
           className="absolute inset-0 bg-white/10 rounded-full scale-0"
-          whileHover={{ scale: 2, opacity: 0 }}
-          transition={{ duration: 0.6 }}
+          whileHover={{ 
+            scale: 2, 
+            opacity: [0.3, 0] 
+          }}
+          transition={{ 
+            duration: 0.6,
+            ease: "easeOut"
+          }}
+        />
+        
+        {/* Gradient shimmer effect */}
+        <motion.div
+          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 -skew-x-12"
+          whileHover={{ 
+            opacity: [0, 1, 0],
+            x: ['-100%', '100%']
+          }}
+          transition={{ duration: 0.8 }}
         />
         
         <div className="relative z-10">
           {renderContent()}
-          <div className="text-xs opacity-50 mt-2">
-            {formatTime(message.timestamp)}
+          <div className="text-xs opacity-50 mt-2 flex items-center justify-between">
+            <span>{formatTime(message.timestamp)}</span>
+            {isOwnMessage && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2 }}
+                className="w-2 h-2 bg-green-400 rounded-full"
+                title="Delivered"
+              />
+            )}
           </div>
         </div>
       </motion.div>

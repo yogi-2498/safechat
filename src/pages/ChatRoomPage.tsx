@@ -130,6 +130,7 @@ export const ChatRoomPage: React.FC = () => {
         fileUrl: result,
         fileName: file.name
       });
+      toast.success(`${file.type.startsWith('image/') ? 'Image' : 'File'} sent successfully!`);
     };
     reader.readAsDataURL(file);
   };
@@ -158,100 +159,154 @@ export const ChatRoomPage: React.FC = () => {
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 secure-content no-select">
-      {/* Security Warning */}
+      {/* Enhanced Security Warning */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-orange-500/20 to-red-500/20 border-b border-orange-500/30 p-2"
+        className="bg-gradient-to-r from-orange-500/20 to-red-500/20 border-b border-orange-500/30 p-3"
       >
-        <div className="flex items-center justify-center space-x-2 text-orange-300 text-sm">
-          <AlertTriangle className="w-4 h-4" />
-          <span>🔒 Screenshot protection active - This conversation is secure and private</span>
+        <div className="flex items-center justify-center space-x-3 text-orange-300">
+          <motion.div
+            animate={{ rotate: [0, 10, -10, 0] }}
+            transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+          >
+            <AlertTriangle className="w-5 h-5" />
+          </motion.div>
+          <span className="text-sm font-medium">
+            🔒 Advanced Security Active: Screenshot protection, encryption, and privacy mode enabled
+          </span>
+          <motion.div
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+            className="w-2 h-2 bg-green-400 rounded-full"
+          />
         </div>
       </motion.div>
 
-      {/* Header */}
+      {/* Enhanced Header */}
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="p-4 bg-black/20 backdrop-blur-md border-b border-white/10"
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2 group">
-              <Shield className="w-5 h-5 text-green-400 group-hover:scale-110 transition-transform" />
-              <span className="font-semibold text-white">Room: {roomCode}</span>
+          <div className="flex items-center space-x-6">
+            <motion.div 
+              className="flex items-center space-x-3 group"
+              whileHover={{ scale: 1.02 }}
+            >
+              <motion.div
+                animate={{ rotate: [0, 360] }}
+                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                className="p-2 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full"
+              >
+                <Shield className="w-5 h-5 text-white" />
+              </motion.div>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <span className="font-bold text-white text-lg">Room: {roomCode}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={copyRoomCode}
+                    className="text-white/70 hover:text-white p-1 hover:bg-white/10 group"
+                  >
+                    <motion.div
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      {copied ? 
+                        <Check className="w-4 h-4 text-green-400" /> : 
+                        <Copy className="w-4 h-4" />
+                      }
+                    </motion.div>
+                  </Button>
+                </div>
+                <div className="flex items-center space-x-4 text-sm">
+                  <div className="flex items-center space-x-2">
+                    <Users className="w-4 h-4 text-blue-400" />
+                    <span className="text-white/70">{connectedUsers}/2 users</span>
+                  </div>
+                  {isConnected && (
+                    <div className="flex items-center space-x-2">
+                      <motion.div
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 1, repeat: Infinity }}
+                        className="w-2 h-2 bg-green-400 rounded-full"
+                      />
+                      <span className="text-green-400 font-medium">E2E Encrypted</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={copyRoomCode}
-                className="text-white/70 hover:text-white p-1 hover:bg-white/10 group"
+                onClick={() => setShowYouTubePlayer(true)}
+                className="text-white/70 hover:text-white hover:bg-red-500/20 group relative overflow-hidden"
               >
-                {copied ? 
-                  <Check className="w-4 h-4 text-green-400 group-hover:scale-110 transition-transform" /> : 
-                  <Copy className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                }
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-pink-500/20 opacity-0 group-hover:opacity-100 transition-opacity"
+                />
+                <Youtube className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform relative z-10" />
+                <span className="relative z-10">Watch Together</span>
               </Button>
-            </div>
+            </motion.div>
             
-            <div className="flex items-center space-x-2">
-              <Users className="w-4 h-4 text-blue-400" />
-              <span className="text-sm text-white/70">{connectedUsers}/2 users</span>
-            </div>
-            
-            {isConnected && (
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                <span className="text-sm text-green-400">Encrypted & Connected</span>
-              </div>
-            )}
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowYouTubePlayer(true)}
-              className="text-white/70 hover:text-white hover:bg-red-500/20 group"
-            >
-              <Youtube className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-              Watch Together
-            </Button>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLeaveRoom}
-              className="text-white border-white/30 hover:bg-red-500/20 hover:border-red-500/50 group"
-            >
-              <LogOut className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-              Leave
-            </Button>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLeaveRoom}
+                className="text-white border-white/30 hover:bg-red-500/20 hover:border-red-500/50 group relative overflow-hidden"
+              >
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-pink-500/20 opacity-0 group-hover:opacity-100 transition-opacity"
+                />
+                <LogOut className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform relative z-10" />
+                <span className="relative z-10">Leave</span>
+              </Button>
+            </motion.div>
           </div>
         </div>
       </motion.div>
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 no-select">
-        <AnimatePresence>
-          {messages.map((message) => (
-            <MessageBubble
-              key={message.id}
-              message={message}
-              isOwnMessage={message.senderId === user?.id}
-            />
-          ))}
-        </AnimatePresence>
-        <div ref={messagesEndRef} />
+      {/* Messages Area with Enhanced Styling */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 no-select relative">
+        {/* Background pattern */}
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute top-10 left-10 w-32 h-32 bg-purple-500 rounded-full blur-3xl" />
+          <div className="absolute bottom-20 right-20 w-40 h-40 bg-blue-500 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 left-1/3 w-24 h-24 bg-pink-500 rounded-full blur-3xl" />
+        </div>
+        
+        <div className="relative z-10">
+          <AnimatePresence>
+            {messages.map((message) => (
+              <MessageBubble
+                key={message.id}
+                message={message}
+                isOwnMessage={message.senderId === user?.id}
+              />
+            ))}
+          </AnimatePresence>
+          <div ref={messagesEndRef} />
+        </div>
       </div>
 
-      {/* Emoji Picker */}
+      {/* Enhanced Emoji Picker */}
       <AnimatePresence>
         {showEmojiPicker && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 20, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.8 }}
+            transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 30 }}
             className="absolute bottom-20 right-4 z-50"
           >
             <EmojiPicker onEmojiSelect={handleEmojiSelect} />
@@ -259,90 +314,107 @@ export const ChatRoomPage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* YouTube Player */}
+      {/* Enhanced YouTube Player */}
       <YouTubePlayer 
         isVisible={showYouTubePlayer}
         onClose={() => setShowYouTubePlayer(false)}
       />
 
-      {/* Recording Indicator */}
+      {/* Enhanced Recording Indicator */}
       {isRecording && (
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-3 bg-red-500/20 backdrop-blur-md border-t border-red-500/30"
+          className="p-4 bg-gradient-to-r from-red-500/20 to-pink-500/20 backdrop-blur-md border-t border-red-500/30"
         >
-          <div className="flex items-center justify-center space-x-3">
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-              <Mic className="w-5 h-5 text-red-400" />
-              <span className="text-red-400 font-medium">Recording: {formatTime(recordingTime)}</span>
+          <div className="flex items-center justify-center space-x-4">
+            <div className="flex items-center space-x-3">
+              <motion.div
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 1, repeat: Infinity }}
+                className="w-4 h-4 bg-red-500 rounded-full"
+              />
+              <Mic className="w-6 h-6 text-red-400" />
+              <span className="text-red-400 font-bold text-lg">Recording: {formatTime(recordingTime)}</span>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleRecording}
-              className="text-red-400 hover:bg-red-500/20"
-            >
-              Stop & Send
-            </Button>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleRecording}
+                className="text-red-400 hover:bg-red-500/20 border border-red-400/30"
+              >
+                <MicOff className="w-4 h-4 mr-2" />
+                Stop & Send
+              </Button>
+            </motion.div>
           </div>
         </motion.div>
       )}
 
-      {/* Input Area */}
+      {/* Enhanced Input Area */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="p-4 bg-black/20 backdrop-blur-md border-t border-white/10"
       >
-        <form onSubmit={handleSubmit} className="flex items-center space-x-2">
+        <form onSubmit={handleSubmit} className="flex items-center space-x-3">
           <div className="flex space-x-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              className="text-white/70 hover:text-white hover:bg-white/10 group"
-              disabled={isRecording}
-            >
-              <Paperclip className="w-5 h-5 group-hover:scale-110 transition-transform" />
-            </Button>
-            
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="text-white/70 hover:text-white hover:bg-white/10 group"
-              disabled={isRecording}
-            >
-              <Smile className="w-5 h-5 group-hover:scale-110 transition-transform" />
-            </Button>
-            
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={toggleRecording}
-              className={`${isRecording ? 'text-red-400 bg-red-500/20' : 'text-white/70'} hover:text-white hover:bg-white/10 group`}
-            >
-              {isRecording ? 
-                <MicOff className="w-5 h-5 group-hover:scale-110 transition-transform" /> : 
-                <Mic className="w-5 h-5 group-hover:scale-110 transition-transform" />
+            {[
+              { 
+                icon: Paperclip, 
+                onClick: () => fileInputRef.current?.click(), 
+                color: 'text-blue-400 hover:bg-blue-500/20',
+                tooltip: 'Attach file'
+              },
+              { 
+                icon: Image, 
+                onClick: () => fileInputRef.current?.click(), 
+                color: 'text-green-400 hover:bg-green-500/20',
+                tooltip: 'Send image'
+              },
+              { 
+                icon: Smile, 
+                onClick: () => setShowEmojiPicker(!showEmojiPicker), 
+                color: 'text-yellow-400 hover:bg-yellow-500/20',
+                tooltip: 'Add emoji'
+              },
+              { 
+                icon: isRecording ? MicOff : Mic, 
+                onClick: toggleRecording, 
+                color: isRecording ? 'text-red-400 bg-red-500/20' : 'text-purple-400 hover:bg-purple-500/20',
+                tooltip: isRecording ? 'Stop recording' : 'Record audio'
+              },
+              { 
+                icon: Youtube, 
+                onClick: () => setShowYouTubePlayer(true), 
+                color: 'text-red-400 hover:bg-red-500/20',
+                tooltip: 'Watch together'
               }
-            </Button>
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowYouTubePlayer(true)}
-              className="text-white/70 hover:text-white hover:bg-red-500/20 group"
-              disabled={isRecording}
-            >
-              <Youtube className="w-5 h-5 group-hover:scale-110 transition-transform" />
-            </Button>
+            ].map((button, index) => (
+              <motion.div
+                key={index}
+                whileHover={{ scale: 1.1, y: -2 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={button.onClick}
+                  className={`${button.color} hover:text-white group relative overflow-hidden`}
+                  disabled={isRecording && button.icon !== MicOff}
+                  title={button.tooltip}
+                >
+                  <motion.div
+                    className="absolute inset-0 bg-white/10 rounded-full scale-0"
+                    whileHover={{ scale: 2, opacity: [0.3, 0] }}
+                    transition={{ duration: 0.6 }}
+                  />
+                  <button.icon className="w-5 h-5 relative z-10" />
+                </Button>
+              </motion.div>
+            ))}
           </div>
           
           <Input
@@ -353,13 +425,20 @@ export const ChatRoomPage: React.FC = () => {
             className="flex-1 bg-white/10 border-white/20 text-white placeholder-white/50 focus:ring-2 focus:ring-purple-500 transition-all duration-300"
           />
           
-          <Button 
-            type="submit" 
-            disabled={!newMessage.trim() || isRecording}
-            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 group"
-          >
-            <Send className="w-5 h-5 group-hover:scale-110 transition-transform" />
-          </Button>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button 
+              type="submit" 
+              disabled={!newMessage.trim() || isRecording}
+              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 group relative overflow-hidden"
+            >
+              <motion.div
+                className="absolute inset-0 bg-white/20 rounded-full scale-0"
+                whileHover={{ scale: 2, opacity: [0.3, 0] }}
+                transition={{ duration: 0.6 }}
+              />
+              <Send className="w-5 h-5 group-hover:scale-110 transition-transform relative z-10" />
+            </Button>
+          </motion.div>
         </form>
       </motion.div>
 
