@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Download, ZoomIn, ZoomOut, RotateCw } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, RotateCw, Shield, AlertTriangle } from 'lucide-react';
 import { Button } from './ui/Button';
 
 interface ImageLightboxProps {
@@ -30,6 +30,49 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
       setPosition({ x: 0, y: 0 });
     }
   }, [isOpen, imageUrl]);
+
+  // Enhanced security measures
+  React.useEffect(() => {
+    if (isOpen) {
+      // Disable right-click context menu
+      const preventContextMenu = (e: MouseEvent) => {
+        e.preventDefault();
+        return false;
+      };
+
+      // Disable drag and drop
+      const preventDragDrop = (e: DragEvent) => {
+        e.preventDefault();
+        return false;
+      };
+
+      // Disable save shortcuts
+      const preventSaveShortcuts = (e: KeyboardEvent) => {
+        if (
+          (e.ctrlKey && e.key === 's') ||
+          (e.metaKey && e.key === 's') ||
+          (e.ctrlKey && e.shiftKey && e.key === 'S') ||
+          (e.metaKey && e.shiftKey && e.key === 'S')
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+      };
+
+      document.addEventListener('contextmenu', preventContextMenu);
+      document.addEventListener('dragstart', preventDragDrop);
+      document.addEventListener('drop', preventDragDrop);
+      document.addEventListener('keydown', preventSaveShortcuts);
+
+      return () => {
+        document.removeEventListener('contextmenu', preventContextMenu);
+        document.removeEventListener('dragstart', preventDragDrop);
+        document.removeEventListener('drop', preventDragDrop);
+        document.removeEventListener('keydown', preventSaveShortcuts);
+      };
+    }
+  }, [isOpen]);
 
   // Handle zoom
   const handleZoomIn = () => {
@@ -78,16 +121,6 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     setIsDragging(false);
   };
 
-  // Handle download
-  const handleDownload = () => {
-    const link = document.createElement('a');
-    link.href = imageUrl;
-    link.download = imageName || 'image';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   // Handle escape key
   React.useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -115,11 +148,26 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/95 backdrop-blur-sm z-[100] flex items-center justify-center"
+        className="fixed inset-0 bg-black/95 backdrop-blur-sm z-[100] flex items-center justify-center no-select"
         onClick={onClose}
+        style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
       >
+        {/* Security Warning */}
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-orange-500/20 border border-orange-500/30 backdrop-blur-md rounded-lg px-4 py-2"
+          >
+            <div className="flex items-center space-x-2 text-orange-300 text-sm">
+              <Shield className="w-4 h-4" />
+              <span>🔒 Image protected - Download and save disabled</span>
+            </div>
+          </motion.div>
+        </div>
+
         {/* Controls */}
-        <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
+        <div className="absolute top-16 left-4 right-4 flex items-center justify-between z-10">
           <div className="flex items-center space-x-2">
             <Button
               variant="ghost"
@@ -156,14 +204,12 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
           </div>
 
           <div className="flex items-center space-x-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleDownload}
-              className="text-white hover:bg-white/20 backdrop-blur-md bg-black/30"
-            >
-              <Download className="w-4 h-4" />
-            </Button>
+            <div className="bg-red-500/20 border border-red-500/30 backdrop-blur-md rounded-lg px-3 py-1">
+              <div className="flex items-center space-x-2 text-red-300 text-sm">
+                <AlertTriangle className="w-4 h-4" />
+                <span>Download Disabled</span>
+              </div>
+            </div>
             
             <Button
               variant="ghost"
@@ -204,13 +250,19 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
         >
           <motion.img
             src={imageUrl}
-            alt={imageName || 'Full size image'}
-            className="max-w-full max-h-full object-contain select-none"
+            alt={imageName || 'Protected image'}
+            className="max-w-full max-h-full object-contain select-none pointer-events-none"
             style={{
               transform: `scale(${zoom}) rotate(${rotation}deg) translate(${position.x / zoom}px, ${position.y / zoom}px)`,
-              transition: isDragging ? 'none' : 'transform 0.2s ease-out'
+              transition: isDragging ? 'none' : 'transform 0.2s ease-out',
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+              WebkitUserDrag: 'none',
+              WebkitTouchCallout: 'none'
             }}
             draggable={false}
+            onDragStart={(e) => e.preventDefault()}
+            onContextMenu={(e) => e.preventDefault()}
             animate={{
               scale: zoom,
               rotate: rotation,
@@ -219,13 +271,23 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
             }}
             transition={{ duration: 0.2 }}
           />
+          
+          {/* Invisible overlay to prevent interactions */}
+          <div 
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: 'transparent',
+              userSelect: 'none',
+              WebkitUserSelect: 'none'
+            }}
+          />
         </motion.div>
 
         {/* Instructions */}
         <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2">
           <div className="bg-black/50 backdrop-blur-md text-white px-4 py-2 rounded-lg text-sm">
             <p className="text-center">
-              Scroll to zoom • Drag to pan • ESC to close
+              Scroll to zoom • Drag to pan • ESC to close • Right-click disabled for security
             </p>
           </div>
         </div>
