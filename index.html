@@ -2,14 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/heart.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="SecureChat - End-to-end encrypted private messaging" />
+    <meta name="description" content="SafeChat - Secure end-to-end encrypted private messaging" />
     <meta name="keywords" content="secure chat, encrypted messaging, private conversations, e2e encryption" />
-    <title>SecureChat - End-to-End Encrypted Messaging</title>
+    <title>SafeChat - Secure Private Messaging</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
       /* Prevent text selection in sensitive areas */
       .no-select {
@@ -29,13 +29,73 @@
       }
 
       /* Custom animations */
-      @keyframes bubble {
-        0% { transform: scale(0); opacity: 1; }
-        100% { transform: scale(1.5); opacity: 0; }
+      @keyframes float {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-20px) rotate(180deg); }
       }
       
-      .bubble-effect {
-        animation: bubble 0.6s ease-out;
+      @keyframes sparkle {
+        0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+        50% { opacity: 1; transform: scale(1) rotate(180deg); }
+      }
+      
+      @keyframes heartbeat {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+      }
+      
+      @keyframes flower-bloom {
+        0% { transform: scale(0) rotate(0deg); opacity: 0; }
+        50% { transform: scale(1.2) rotate(180deg); opacity: 1; }
+        100% { transform: scale(1) rotate(360deg); opacity: 0.8; }
+      }
+      
+      .float-animation {
+        animation: float 6s ease-in-out infinite;
+      }
+      
+      .sparkle-animation {
+        animation: sparkle 3s ease-in-out infinite;
+      }
+      
+      .heartbeat-animation {
+        animation: heartbeat 2s ease-in-out infinite;
+      }
+      
+      .flower-animation {
+        animation: flower-bloom 4s ease-in-out infinite;
+      }
+
+      /* Glassmorphism styles */
+      .glass {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+      }
+      
+      .glass-dark {
+        background: rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      }
+
+      /* Neomorphism styles */
+      .neo-light {
+        background: linear-gradient(145deg, #f0f0f0, #cacaca);
+        box-shadow: 20px 20px 60px #bebebe, -20px -20px 60px #ffffff;
+      }
+      
+      .neo-dark {
+        background: linear-gradient(145deg, #2a2a2a, #1e1e1e);
+        box-shadow: 20px 20px 60px #1a1a1a, -20px -20px 60px #2e2e2e;
+      }
+
+      /* 3D Transform effects */
+      .transform-3d {
+        transform-style: preserve-3d;
+        perspective: 1000px;
       }
     </style>
   </head>
