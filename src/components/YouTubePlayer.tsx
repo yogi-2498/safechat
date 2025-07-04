@@ -7,8 +7,6 @@ import {
   Pause, 
   Volume2, 
   VolumeX, 
-  Maximize, 
-  Minimize, 
   X,
   ExternalLink,
   Users,
@@ -26,8 +24,6 @@ import toast from 'react-hot-toast'
 interface YouTubePlayerProps {
   onClose: () => void
   isVisible: boolean
-  isMinimized?: boolean
-  onToggleMinimize?: () => void
 }
 
 interface VideoResult {
@@ -42,9 +38,7 @@ interface VideoResult {
 
 export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({ 
   onClose, 
-  isVisible, 
-  isMinimized = false,
-  onToggleMinimize 
+  isVisible
 }) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<VideoResult[]>([])
@@ -99,6 +93,24 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
       views: '654M views',
       channel: 'Smash Mouth',
       description: 'Official Music Video for All Star by Smash Mouth'
+    },
+    {
+      id: '9bZkp7q19f0',
+      title: 'PSY - GANGNAM STYLE (강남스타일) M/V',
+      thumbnail: 'https://img.youtube.com/vi/9bZkp7q19f0/mqdefault.jpg',
+      duration: '4:13',
+      views: '4.8B views',
+      channel: 'officialpsy',
+      description: 'PSY - GANGNAM STYLE (강남스타일) M/V'
+    },
+    {
+      id: 'hT_nvWreIhg',
+      title: 'The Weeknd - Blinding Lights (Official Video)',
+      thumbnail: 'https://img.youtube.com/vi/hT_nvWreIhg/mqdefault.jpg',
+      duration: '4:20',
+      views: '1.1B views',
+      channel: 'The Weeknd',
+      description: 'Official music video for Blinding Lights'
     }
   ]
 
@@ -125,7 +137,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
     setIsSearching(true)
     
-    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000))
+    await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200))
     
     const searchTerms = searchQuery.toLowerCase().split(' ')
     const filtered = mockSearchResults.filter(video => {
@@ -133,7 +145,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
       return searchTerms.some(term => searchableText.includes(term))
     })
     
-    const results = filtered.length > 0 ? filtered : mockSearchResults.slice(0, 4)
+    const results = filtered.length > 0 ? filtered : mockSearchResults.slice(0, 6)
     
     setSearchResults(results)
     setIsSearching(false)
@@ -219,7 +231,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   // Load popular videos on mount
   useEffect(() => {
     if (isVisible && searchResults.length === 0) {
-      setSearchResults(mockSearchResults.slice(0, 4))
+      setSearchResults(mockSearchResults.slice(0, 6))
     }
   }, [isVisible])
 
@@ -244,9 +256,9 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
   return (
     <div className="w-full h-full bg-gradient-to-br from-pink-50 to-rose-50 relative">
-      <Card className="h-full flex flex-col overflow-hidden bg-white/80 backdrop-blur-xl border border-pink-200/50 shadow-2xl">
+      <Card className="h-full flex flex-col overflow-hidden bg-white/90 backdrop-blur-xl border border-pink-200/50 shadow-2xl rounded-none">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 bg-gradient-to-r from-pink-100/50 to-rose-100/50 border-b border-pink-200/50 flex-shrink-0">
+        <div className="flex items-center justify-between p-4 bg-gradient-to-r from-pink-100/80 to-rose-100/80 border-b border-pink-200/50 flex-shrink-0">
           <div className="flex items-center space-x-3">
             <motion.div 
               className="p-2 bg-gradient-to-r from-pink-400 to-rose-400 rounded-lg shadow-lg"
@@ -287,18 +299,6 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                 >
                   <Search className="w-4 h-4 mr-2" />
                   New Search
-                </Button>
-              </motion.div>
-            )}
-            {onToggleMinimize && (
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onToggleMinimize}
-                  className="text-gray-600 hover:text-gray-800 hover:bg-pink-100"
-                >
-                  {isMinimized ? <Maximize className="w-4 h-4" /> : <Minimize className="w-4 h-4" />}
                 </Button>
               </motion.div>
             )}
@@ -349,7 +349,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                   placeholder="Search videos or paste YouTube URL..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1 bg-white/60 border-pink-300/50 text-gray-800 placeholder-gray-500 text-lg py-3"
+                  className="flex-1 bg-white/70 border-pink-300/50 text-gray-800 placeholder-gray-500 text-lg py-3"
                   icon={<Search className="w-5 h-5" />}
                 />
                 <Button
@@ -388,7 +388,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                     </span>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {searchResults.map((video, index) => (
                       <motion.div
                         key={video.id}
@@ -399,7 +399,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                         className="group cursor-pointer"
                         onClick={() => loadVideoFromSearch(video)}
                       >
-                        <Card className="p-4 bg-white/60 border-pink-200/50 hover:bg-white/80 transition-all duration-300 group-hover:border-pink-400/50 overflow-hidden">
+                        <Card className="p-4 bg-white/70 border-pink-200/50 hover:bg-white/90 transition-all duration-300 group-hover:border-pink-400/50 overflow-hidden">
                           <div className="relative mb-4 overflow-hidden rounded-lg">
                             <img
                               src={video.thumbnail}

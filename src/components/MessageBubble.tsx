@@ -22,14 +22,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     switch (message.type) {
       case 'text':
         return (
-          <p className="whitespace-pre-wrap break-words">{message.content}</p>
+          <p className="whitespace-pre-wrap break-words leading-relaxed">{message.content}</p>
         )
       
       case 'image':
         return (
           <div className="group">
             <motion.div
-              className="relative cursor-pointer overflow-hidden rounded-lg"
+              className="relative cursor-pointer overflow-hidden rounded-xl"
               whileHover={{ scale: 1.02 }}
               transition={{ duration: 0.2 }}
               onClick={() => onImageClick?.(message.fileUrl!, message.fileName)}
@@ -37,7 +37,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               <img 
                 src={message.fileUrl} 
                 alt={message.fileName}
-                className="rounded-lg max-w-full h-auto mb-2 max-h-64 object-cover transition-all duration-300 group-hover:brightness-110 select-none pointer-events-none"
+                className="rounded-xl max-w-full h-auto mb-2 max-h-64 object-cover transition-all duration-300 group-hover:brightness-110 select-none pointer-events-none"
                 style={{
                   userSelect: 'none',
                   WebkitUserSelect: 'none',
@@ -53,7 +53,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               <motion.div
                 initial={{ opacity: 0 }}
                 whileHover={{ opacity: 1 }}
-                className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center rounded-lg"
+                className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center rounded-xl"
               >
                 <motion.div
                   initial={{ scale: 0.8 }}
@@ -89,7 +89,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       case 'file':
         return (
           <motion.div 
-            className="flex items-center space-x-3 p-4 bg-white/10 rounded-lg border border-pink-200/30 hover:bg-white/15 transition-colors cursor-pointer group"
+            className="flex items-center space-x-3 p-4 bg-white/10 rounded-xl border border-pink-200/30 hover:bg-white/15 transition-colors cursor-pointer group"
             whileHover={{ scale: 1.02 }}
             transition={{ duration: 0.2 }}
           >
@@ -113,7 +113,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       case 'audio':
         return (
           <motion.div 
-            className="flex items-center space-x-3 p-4 bg-white/10 rounded-lg border border-pink-200/30 hover:bg-white/15 transition-colors group"
+            className="flex items-center space-x-3 p-4 bg-white/10 rounded-xl border border-pink-200/30 hover:bg-white/15 transition-colors group"
             whileHover={{ scale: 1.02 }}
             transition={{ duration: 0.2 }}
           >
@@ -146,8 +146,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       <motion.div 
         className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl relative overflow-hidden group ${
           isOwnMessage 
-            ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white' 
-            : 'bg-white/80 backdrop-blur-md text-gray-800 border border-pink-200/50'
+            ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg' 
+            : 'bg-white/90 backdrop-blur-md text-gray-800 border border-pink-200/50 shadow-md'
         }`}
         whileHover={{ scale: 1.02, y: -2 }}
         transition={{ duration: 0.2 }}
@@ -177,7 +177,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         
         <div className="relative z-10">
           {renderContent()}
-          <div className="text-xs opacity-50 mt-2 flex items-center justify-between">
+          <div className="text-xs opacity-60 mt-2 flex items-center justify-between">
             <span>{formatTime(message.timestamp)}</span>
             {isOwnMessage && (
               <motion.div
