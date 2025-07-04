@@ -1,27 +1,32 @@
 import React from 'react'
 import { motion } from 'framer-motion'
+import { useTheme } from '../contexts/ThemeContext'
 
-const FloatingHeart: React.FC<{ delay?: number; className?: string }> = ({ delay = 0, className = '' }) => (
-  <motion.div
-    className={`absolute text-pink-400 ${className}`}
-    initial={{ opacity: 0, scale: 0, y: 100 }}
-    animate={{ 
-      opacity: [0, 1, 0.8, 0],
-      scale: [0, 1.2, 1, 0.5],
-      y: [100, -200],
-      x: [0, 30, -20, 0],
-      rotate: [0, 360]
-    }}
-    transition={{
-      duration: 8,
-      delay,
-      repeat: Infinity,
-      ease: "easeInOut"
-    }}
-  >
-    💖
-  </motion.div>
-)
+const FloatingHeart: React.FC<{ delay?: number; className?: string }> = ({ delay = 0, className = '' }) => {
+  const { isDark } = useTheme()
+  
+  return (
+    <motion.div
+      className={`absolute ${isDark ? 'text-pink-400' : 'text-pink-500'} ${className}`}
+      initial={{ opacity: 0, scale: 0, y: 100 }}
+      animate={{ 
+        opacity: [0, 1, 0.8, 0],
+        scale: [0, 1.2, 1, 0.5],
+        y: [100, -200],
+        x: [0, 30, -20, 0],
+        rotate: [0, 360]
+      }}
+      transition={{
+        duration: 8,
+        delay,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }}
+    >
+      💖
+    </motion.div>
+  )
+}
 
 const FloatingRose: React.FC<{ delay?: number; className?: string; type?: 'red' | 'white' }> = ({ 
   delay = 0, 
@@ -49,26 +54,30 @@ const FloatingRose: React.FC<{ delay?: number; className?: string; type?: 'red' 
   </motion.div>
 )
 
-const FloatingSparkle: React.FC<{ delay?: number; className?: string }> = ({ delay = 0, className = '' }) => (
-  <motion.div
-    className={`absolute ${className}`}
-    initial={{ opacity: 0, scale: 0 }}
-    animate={{ 
-      opacity: [0, 1, 0.7, 1, 0],
-      scale: [0, 1.5, 1, 1.2, 0],
-      rotate: [0, 180, 360],
-      y: [0, -150]
-    }}
-    transition={{
-      duration: 6,
-      delay,
-      repeat: Infinity,
-      ease: "easeInOut"
-    }}
-  >
-    ✨
-  </motion.div>
-)
+const FloatingSparkle: React.FC<{ delay?: number; className?: string }> = ({ delay = 0, className = '' }) => {
+  const { isDark } = useTheme()
+  
+  return (
+    <motion.div
+      className={`absolute ${isDark ? 'text-yellow-300' : 'text-yellow-500'} ${className}`}
+      initial={{ opacity: 0, scale: 0 }}
+      animate={{ 
+        opacity: [0, 1, 0.7, 1, 0],
+        scale: [0, 1.5, 1, 1.2, 0],
+        rotate: [0, 180, 360],
+        y: [0, -150]
+      }}
+      transition={{
+        duration: 6,
+        delay,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }}
+    >
+      ✨
+    </motion.div>
+  )
+}
 
 export const FloatingElements: React.FC = () => {
   const elements = Array.from({ length: 25 }, (_, i) => i)

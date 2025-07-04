@@ -2,18 +2,24 @@ import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Download, Play, Pause, ImageIcon, Shield, Heart } from 'lucide-react'
 import { Message } from '../types'
+import { useTheme } from '../contexts/ThemeContext'
+import ReactMarkdown from 'react-markdown'
 
 interface MessageBubbleProps {
   message: Message
   isOwnMessage: boolean
   onImageClick?: (imageUrl: string, imageName?: string) => void
+  supportMarkdown?: boolean
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({ 
   message, 
   isOwnMessage, 
-  onImageClick 
+  onImageClick,
+  supportMarkdown = false
 }) => {
+  const { isDark } = useTheme()
+
   const formatTime = (timestamp: string) => {
     return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
@@ -21,7 +27,45 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const renderContent = () => {
     switch (message.type) {
       case 'text':
-        return (
+        return supportMarkdown ? (
+          <ReactMarkdown 
+            className={`prose prose-sm max-w-none ${
+              isOwnMessage 
+                ? 'prose-invert' 
+                : isDark ? 'prose-invert' : 'prose-gray'
+            }`}
+            components={{
+              p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+              strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+              em: ({ children }) => <em className="italic">{children}</em>,
+              code: ({ children }) => (
+                <code className={`px-1 py-0.5 rounded text-sm ${
+                  isOwnMessage 
+                    ? 'bg-white/20 text-white' 
+                    : isDark ? 'bg-gray-700 text-gray-200' : 'bg-gray-200 text-gray-800'
+                }`}>
+                  {children}
+                </code>
+              ),
+              a: ({ href, children }) => (
+                <a 
+                  href={href} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className={`underline hover:no-underline ${
+                    isOwnMessage 
+                      ? 'text-pink-200 hover:text-white' 
+                      : 'text-pink-500 hover:text-pink-600'
+                  }`}
+                >
+                  {children}
+                </a>
+              )
+            }}
+          >
+            {message.content}
+          </ReactMarkdown>
+        ) : (
           <p className="whitespace-pre-wrap break-words leading-relaxed">{message.content}</p>
         )
       
@@ -89,7 +133,11 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       case 'file':
         return (
           <motion.div 
-            className="flex items-center space-x-3 p-4 bg-white/10 rounded-xl border border-pink-200/30 hover:bg-white/15 transition-colors cursor-pointer group"
+            className={`flex items-center space-x-3 p-4 rounded-xl border transition-colors cursor-pointer group ${
+              isDark 
+                ? 'bg-white/10 border-pink-200/30 hover:bg-white/15' 
+                : 'bg-white/10 border-pink-200/30 hover:bg-white/15'
+            }`}
             whileHover={{ scale: 1.02 }}
             transition={{ duration: 0.2 }}
           >
@@ -97,7 +145,11 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               <Download className="w-6 h-6 text-pink-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-800 truncate">{message.fileName}</p>
+              <p className={`text-sm font-medium truncate ${
+                isOwnMessage ? 'text-white' : isDark ? 'text-white' : 'text-gray-800'
+              }`}>
+                {message.fileName}
+              </p>
               <a 
                 href={message.fileUrl}
                 download={message.fileName}
@@ -113,7 +165,11 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       case 'audio':
         return (
           <motion.div 
-            className="flex items-center space-x-3 p-4 bg-white/10 rounded-xl border border-pink-200/30 hover:bg-white/15 transition-colors group"
+            className={`flex items-center space-x-3 p-4 rounded-xl border transition-colors group ${
+              isDark 
+                ? 'bg-white/10 border-pink-200/30 hover:bg-white/15' 
+                : 'bg-white/10 border-pink-200/30 hover:bg-white/15'
+            }`}
             whileHover={{ scale: 1.02 }}
             transition={{ duration: 0.2 }}
           >
@@ -125,8 +181,16 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               <Play className="w-6 h-6 text-pink-400" />
             </motion.button>
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-800">{message.content}</p>
-              <p className="text-xs text-gray-600">Audio message</p>
+              <p className={`text-sm font-medium ${
+                isOwnMessage ? 'text-white' : isDark ? 'text-white' : 'text-gray-800'
+              }`}>
+                {message.content}
+              </p>
+              <p className={`text-xs ${
+                isOwnMessage ? 'text-white/70' : isDark ? 'text-white/70' : 'text-gray-600'
+              }`}>
+                Audio message
+              </p>
             </div>
           </motion.div>
         )
@@ -147,7 +211,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl relative overflow-hidden group ${
           isOwnMessage 
             ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg' 
-            : 'bg-white/90 backdrop-blur-md text-gray-800 border border-pink-200/50 shadow-md'
+            : isDark 
+              ? 'bg-white/10 backdrop-blur-md text-white border border-white/20 shadow-md'
+              : 'bg-white/90 backdrop-blur-md text-gray-800 border border-pink-200/50 shadow-md'
         }`}
         whileHover={{ scale: 1.02, y: -2 }}
         transition={{ duration: 0.2 }}

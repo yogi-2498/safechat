@@ -19,6 +19,7 @@ import {
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import { Card } from './ui/Card'
+import { useTheme } from '../contexts/ThemeContext'
 import toast from 'react-hot-toast'
 
 interface YouTubePlayerProps {
@@ -40,6 +41,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   onClose, 
   isVisible
 }) => {
+  const { isDark } = useTheme()
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<VideoResult[]>([])
   const [currentVideo, setCurrentVideo] = useState<string | null>(null)
@@ -255,10 +257,22 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   if (!isVisible) return null
 
   return (
-    <div className="w-full h-full bg-gradient-to-br from-pink-50 to-rose-50 relative">
-      <Card className="h-full flex flex-col overflow-hidden bg-white/90 backdrop-blur-xl border border-pink-200/50 shadow-2xl rounded-none">
+    <div className={`w-full h-full relative transition-all duration-1000 ${
+      isDark 
+        ? 'bg-gradient-to-br from-gray-900 to-purple-900' 
+        : 'bg-gradient-to-br from-pink-50 to-rose-50'
+    }`}>
+      <Card className={`h-full flex flex-col overflow-hidden shadow-2xl rounded-none ${
+        isDark 
+          ? 'bg-black/90 backdrop-blur-xl border-white/20' 
+          : 'bg-white/90 backdrop-blur-xl border-pink-200/50'
+      }`}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 bg-gradient-to-r from-pink-100/80 to-rose-100/80 border-b border-pink-200/50 flex-shrink-0">
+        <div className={`flex items-center justify-between p-4 border-b flex-shrink-0 ${
+          isDark 
+            ? 'bg-gradient-to-r from-purple-900/80 to-pink-900/80 border-white/10' 
+            : 'bg-gradient-to-r from-pink-100/80 to-rose-100/80 border-pink-200/50'
+        }`}>
           <div className="flex items-center space-x-3">
             <motion.div 
               className="p-2 bg-gradient-to-r from-pink-400 to-rose-400 rounded-lg shadow-lg"
@@ -268,9 +282,15 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
               <Youtube className="w-6 h-6 text-white" />
             </motion.div>
             <div>
-              <h3 className="text-gray-800 font-bold text-lg font-serif">YouTube Together</h3>
+              <h3 className={`font-bold text-lg font-serif ${
+                isDark ? 'text-white' : 'text-gray-800'
+              }`}>
+                YouTube Together
+              </h3>
               {watchingTogether && (
-                <div className="flex items-center space-x-3 text-sm text-gray-600">
+                <div className={`flex items-center space-x-3 text-sm ${
+                  isDark ? 'text-white/70' : 'text-gray-600'
+                }`}>
                   <div className="flex items-center space-x-1">
                     <Users className="w-4 h-4" />
                     <span>{viewers} watching</span>
@@ -295,7 +315,11 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={goBackToSearch}
-                  className="text-gray-600 hover:text-gray-800 hover:bg-pink-100"
+                  className={`${
+                    isDark 
+                      ? 'text-white/70 hover:text-white hover:bg-white/10' 
+                      : 'text-gray-600 hover:text-gray-800 hover:bg-pink-100'
+                  }`}
                 >
                   <Search className="w-4 h-4 mr-2" />
                   New Search
@@ -307,7 +331,11 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={onClose}
-                className="text-gray-600 hover:text-gray-800 hover:bg-pink-100"
+                className={`${
+                  isDark 
+                    ? 'text-white/70 hover:text-white hover:bg-red-500/20' 
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-pink-100'
+                }`}
               >
                 <X className="w-4 h-4" />
               </Button>
@@ -332,8 +360,14 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                 >
                   <Youtube className="w-10 h-10 text-white" />
                 </motion.div>
-                <h4 className="text-2xl font-bold text-gray-800 mb-3 font-serif">Search & Watch Together</h4>
-                <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+                <h4 className={`text-2xl font-bold mb-3 font-serif ${
+                  isDark ? 'text-white' : 'text-gray-800'
+                }`}>
+                  Search & Watch Together
+                </h4>
+                <p className={`text-lg max-w-2xl mx-auto ${
+                  isDark ? 'text-white/80' : 'text-gray-600'
+                }`}>
                   Search for any video or paste a YouTube URL to start watching together in real-time
                 </p>
               </motion.div>
@@ -349,7 +383,11 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                   placeholder="Search videos or paste YouTube URL..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1 bg-white/70 border-pink-300/50 text-gray-800 placeholder-gray-500 text-lg py-3"
+                  className={`flex-1 text-lg py-3 ${
+                    isDark 
+                      ? 'bg-white/10 border-white/30 text-white placeholder-white/50' 
+                      : 'bg-white/70 border-pink-300/50 text-gray-800 placeholder-gray-500'
+                  }`}
                   icon={<Search className="w-5 h-5" />}
                 />
                 <Button
@@ -380,10 +418,14 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                   transition={{ duration: 0.5, delay: 0.4 }}
                 >
                   <div className="flex items-center justify-between">
-                    <h5 className="text-xl font-bold text-gray-800 font-serif">
+                    <h5 className={`text-xl font-bold font-serif ${
+                      isDark ? 'text-white' : 'text-gray-800'
+                    }`}>
                       {searchQuery ? `Results for "${searchQuery}"` : 'Popular Videos'}
                     </h5>
-                    <span className="text-gray-500 text-sm">
+                    <span className={`text-sm ${
+                      isDark ? 'text-white/60' : 'text-gray-500'
+                    }`}>
                       {searchResults.length} video{searchResults.length !== 1 ? 's' : ''} found
                     </span>
                   </div>
@@ -399,7 +441,11 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                         className="group cursor-pointer"
                         onClick={() => loadVideoFromSearch(video)}
                       >
-                        <Card className="p-4 bg-white/70 border-pink-200/50 hover:bg-white/90 transition-all duration-300 group-hover:border-pink-400/50 overflow-hidden">
+                        <Card className={`p-4 border transition-all duration-300 group-hover:border-pink-400/50 overflow-hidden ${
+                          isDark 
+                            ? 'bg-white/10 border-white/20 hover:bg-white/15' 
+                            : 'bg-white/70 border-pink-200/50 hover:bg-white/90'
+                        }`}>
                           <div className="relative mb-4 overflow-hidden rounded-lg">
                             <img
                               src={video.thumbnail}
@@ -420,10 +466,14 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                               </motion.div>
                             </div>
                           </div>
-                          <h6 className="text-gray-800 font-semibold text-sm mb-2 line-clamp-2 group-hover:text-pink-600 transition-colors leading-tight">
+                          <h6 className={`font-semibold text-sm mb-2 line-clamp-2 group-hover:text-pink-600 transition-colors leading-tight ${
+                            isDark ? 'text-white' : 'text-gray-800'
+                          }`}>
                             {video.title}
                           </h6>
-                          <div className="flex items-center justify-between text-xs text-gray-500">
+                          <div className={`flex items-center justify-between text-xs ${
+                            isDark ? 'text-white/60' : 'text-gray-500'
+                          }`}>
                             <span className="truncate mr-2">{video.channel}</span>
                             <div className="flex items-center space-x-1 flex-shrink-0">
                               <Eye className="w-3 h-3" />

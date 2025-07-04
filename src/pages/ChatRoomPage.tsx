@@ -17,7 +17,9 @@ import {
   Youtube,
   Heart,
   ArrowDown,
-  Settings
+  Moon,
+  Sun,
+  ArrowUp
 } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -27,16 +29,20 @@ import { SecureImageViewer } from '../components/SecureImageViewer'
 import { MessageBubble } from '../components/MessageBubble'
 import { EmojiPicker } from '../components/EmojiPicker'
 import { FloatingElements } from '../components/FloatingElements'
+import { LoadingSpinner } from '../components/LoadingSpinner'
 import { useAuth } from '../contexts/AuthContext'
 import { useChat } from '../contexts/ChatContext'
+import { useTheme } from '../contexts/ThemeContext'
 import { useScreenshotPrevention } from '../hooks/useScreenshotPrevention'
+import ReactMarkdown from 'react-markdown'
 import toast from 'react-hot-toast'
 
 export const ChatRoomPage: React.FC = () => {
   const { roomCode } = useParams<{ roomCode: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { messages, sendMessage, isConnected, connectedUsers } = useChat()
+  const { messages, sendMessage, isConnected, connectedUsers, isLoading } = useChat()
+  const { isDark, toggleTheme } = useTheme()
   
   const [newMessage, setNewMessage] = useState('')
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
@@ -47,11 +53,13 @@ export const ChatRoomPage: React.FC = () => {
   const [showImageViewer, setShowImageViewer] = useState(false)
   const [selectedImage, setSelectedImage] = useState<{ url: string; name?: string } | null>(null)
   const [showScrollButton, setShowScrollButton] = useState(false)
+  const [isTyping, setIsTyping] = useState(false)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Enable screenshot prevention
   useScreenshotPrevention()
@@ -96,6 +104,17 @@ export const ChatRoomPage: React.FC = () => {
     }
   }, [isRecording])
 
+  // Typing indicator
+  const handleTyping = () => {
+    setIsTyping(true)
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current)
+    }
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false)
+    }, 2000)
+  }
+
   // Format recording time
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60)
@@ -115,7 +134,7 @@ export const ChatRoomPage: React.FC = () => {
     }
   }
 
-  // Send text message
+  // Send text message with Markdown support
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!newMessage.trim()) return
@@ -125,6 +144,7 @@ export const ChatRoomPage: React.FC = () => {
       type: 'text'
     })
     setNewMessage('')
+    setIsTyping(false)
   }
 
   // Handle emoji selection
@@ -197,8 +217,21 @@ export const ChatRoomPage: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  // Scroll to top
+  const scrollToTop = () => {
+    messagesContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  if (isLoading) {
+    return <LoadingSpinner />
+  }
+
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-pink-50 via-rose-50 to-purple-50 relative overflow-hidden">
+    <div className={`h-screen flex flex-col relative overflow-hidden transition-all duration-1000 ${
+      isDark 
+        ? 'bg-gradient-to-br from-gray-900 via-purple-900 to-pink-900' 
+        : 'bg-gradient-to-br from-pink-50 via-rose-50 to-purple-50'
+    }`}>
       {/* Floating romantic elements */}
       <FloatingElements />
 
@@ -217,7 +250,9 @@ export const ChatRoomPage: React.FC = () => {
       <div className="flex-1 flex flex-col relative z-10">
         {/* YouTube Player - Top Half */}
         {showYouTubePlayer && (
-          <div className="h-1/2 border-b-2 border-pink-200/50">
+          <div className={`h-1/2 border-b-2 ${
+            isDark ? 'border-white/20' : 'border-pink-200/50'
+          }`}>
             <YouTubePlayer 
               isVisible={showYouTubePlayer}
               onClose={() => setShowYouTubePlayer(false)}
@@ -227,11 +262,15 @@ export const ChatRoomPage: React.FC = () => {
 
         {/* Chat Section - Bottom Half or Full Screen */}
         <div className={`${showYouTubePlayer ? 'h-1/2' : 'h-full'} flex flex-col transition-all duration-500`}>
-          {/* Chat Header */}
+          {/* Sticky Chat Header */}
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="p-4 bg-white/80 backdrop-blur-md border-b border-pink-200/50 flex-shrink-0"
+            className={`sticky top-0 z-20 p-4 backdrop-blur-md border-b flex-shrink-0 ${
+              isDark 
+                ? 'bg-black/20 border-white/10' 
+                : 'bg-white/80 border-pink-200/50'
+            }`}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
@@ -251,12 +290,20 @@ export const ChatRoomPage: React.FC = () => {
                   </motion.div>
                   <div>
                     <div className="flex items-center space-x-2">
-                      <span className="font-bold text-gray-800 text-lg font-serif">Room: {roomCode}</span>
+                      <span className={`font-bold text-lg font-serif ${
+                        isDark ? 'text-white' : 'text-gray-800'
+                      }`}>
+                        Room: {roomCode}
+                      </span>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={copyRoomCode}
-                        className="text-gray-600 hover:text-gray-800 p-1 hover:bg-pink-100 group"
+                        className={`p-1 group ${
+                          isDark 
+                            ? 'text-white/70 hover:text-white hover:bg-white/10' 
+                            : 'text-gray-600 hover:text-gray-800 hover:bg-pink-100'
+                        }`}
                       >
                         <motion.div
                           whileHover={{ scale: 1.1 }}
@@ -272,7 +319,9 @@ export const ChatRoomPage: React.FC = () => {
                     <div className="flex items-center space-x-4 text-sm">
                       <div className="flex items-center space-x-2">
                         <Users className="w-4 h-4 text-pink-500" />
-                        <span className="text-gray-600">{connectedUsers}/2 users</span>
+                        <span className={isDark ? 'text-white/70' : 'text-gray-600'}>
+                          {connectedUsers}/2 users
+                        </span>
                       </div>
                       {isConnected && (
                         <div className="flex items-center space-x-2">
@@ -294,8 +343,27 @@ export const ChatRoomPage: React.FC = () => {
                   <Button
                     variant="ghost"
                     size="sm"
+                    onClick={toggleTheme}
+                    className={`${
+                      isDark 
+                        ? 'text-white/70 hover:text-white hover:bg-white/10' 
+                        : 'text-gray-600 hover:text-gray-800 hover:bg-pink-100'
+                    } group relative overflow-hidden`}
+                  >
+                    {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                  </Button>
+                </motion.div>
+                
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={toggleYouTubePlayer}
-                    className="text-gray-600 hover:text-gray-800 hover:bg-pink-100 group relative overflow-hidden"
+                    className={`group relative overflow-hidden ${
+                      isDark 
+                        ? 'text-white/70 hover:text-white hover:bg-red-500/20' 
+                        : 'text-gray-600 hover:text-gray-800 hover:bg-pink-100'
+                    }`}
                   >
                     <Youtube className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform relative z-10" />
                     <span className="relative z-10">
@@ -309,7 +377,11 @@ export const ChatRoomPage: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={handleLeaveRoom}
-                    className="text-gray-700 border-pink-300/50 hover:bg-pink-50 hover:border-pink-400/50 group relative overflow-hidden"
+                    className={`group relative overflow-hidden ${
+                      isDark 
+                        ? 'text-white border-white/30 hover:bg-red-500/20 hover:border-red-400/50' 
+                        : 'text-gray-700 border-pink-300/50 hover:bg-pink-50 hover:border-pink-400/50'
+                    }`}
                   >
                     <LogOut className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform relative z-10" />
                     <span className="relative z-10">Leave</span>
@@ -319,13 +391,33 @@ export const ChatRoomPage: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* Messages Area */}
+          {/* Messages Area with Scrollback Support */}
           <div 
             ref={messagesContainerRef}
             className="flex-1 overflow-y-auto p-4 space-y-4 relative scroll-smooth"
             style={{ scrollBehavior: 'smooth' }}
           >
             <div className="relative z-10">
+              {/* Scroll to top button */}
+              <AnimatePresence>
+                {messages.length > 10 && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="sticky top-4 left-4 z-20 mb-4"
+                  >
+                    <Button
+                      onClick={scrollToTop}
+                      className="rounded-full w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 shadow-lg"
+                      size="sm"
+                    >
+                      <ArrowUp className="w-5 h-5" />
+                    </Button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <AnimatePresence>
                 {messages.map((message) => (
                   <MessageBubble
@@ -333,8 +425,45 @@ export const ChatRoomPage: React.FC = () => {
                     message={message}
                     isOwnMessage={message.senderId === user?.id}
                     onImageClick={handleImageClick}
+                    supportMarkdown={true}
                   />
                 ))}
+              </AnimatePresence>
+              
+              {/* Typing Indicator */}
+              <AnimatePresence>
+                {isTyping && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    className="flex justify-start mb-4"
+                  >
+                    <div className={`px-4 py-2 rounded-2xl ${
+                      isDark 
+                        ? 'bg-white/10 backdrop-blur-md text-white border border-white/20' 
+                        : 'bg-white/90 backdrop-blur-md text-gray-800 border border-pink-200/50'
+                    }`}>
+                      <div className="flex space-x-1">
+                        {[0, 1, 2].map((i) => (
+                          <motion.div
+                            key={i}
+                            className="w-2 h-2 bg-pink-400 rounded-full"
+                            animate={{
+                              scale: [1, 1.5, 1],
+                              opacity: [0.5, 1, 0.5]
+                            }}
+                            transition={{
+                              duration: 1.5,
+                              repeat: Infinity,
+                              delay: i * 0.2
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
               </AnimatePresence>
               
               <div ref={messagesEndRef} />
@@ -381,7 +510,11 @@ export const ChatRoomPage: React.FC = () => {
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-4 bg-pink-100/90 backdrop-blur-md border-t border-pink-200/50 flex-shrink-0"
+              className={`p-4 backdrop-blur-md border-t flex-shrink-0 ${
+                isDark 
+                  ? 'bg-pink-500/20 border-pink-400/30' 
+                  : 'bg-pink-100/90 border-pink-200/50'
+              }`}
             >
               <div className="flex items-center justify-center space-x-4">
                 <div className="flex items-center space-x-3">
@@ -408,11 +541,15 @@ export const ChatRoomPage: React.FC = () => {
             </motion.div>
           )}
 
-          {/* Input Area */}
+          {/* Enhanced Input Area */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="p-4 bg-white/80 backdrop-blur-md border-t border-pink-200/50 flex-shrink-0"
+            className={`p-4 backdrop-blur-md border-t flex-shrink-0 ${
+              isDark 
+                ? 'bg-black/20 border-white/10' 
+                : 'bg-white/80 border-pink-200/50'
+            }`}
           >
             <form onSubmit={handleSubmit} className="flex items-center space-x-3">
               <div className="flex space-x-2">
@@ -463,11 +600,18 @@ export const ChatRoomPage: React.FC = () => {
               </div>
               
               <Input
-                placeholder={isRecording ? 'Recording audio...' : 'Type your message...'}
+                placeholder={isRecording ? 'Recording audio...' : 'Type your message... (Markdown supported)'}
                 value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
+                onChange={(e) => {
+                  setNewMessage(e.target.value)
+                  handleTyping()
+                }}
                 disabled={isRecording}
-                className="flex-1 bg-white/70 border-pink-300/50 text-gray-800 placeholder-gray-500 focus:ring-2 focus:ring-pink-400 transition-all duration-300 rounded-full"
+                className={`flex-1 focus:ring-2 focus:ring-pink-400 transition-all duration-300 rounded-full ${
+                  isDark 
+                    ? 'bg-white/10 border-white/30 text-white placeholder-white/50' 
+                    : 'bg-white/70 border-pink-300/50 text-gray-800 placeholder-gray-500'
+                }`}
               />
               
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -480,6 +624,13 @@ export const ChatRoomPage: React.FC = () => {
                 </Button>
               </motion.div>
             </form>
+            
+            {/* Markdown help text */}
+            <div className={`mt-2 text-xs ${
+              isDark ? 'text-white/50' : 'text-gray-500'
+            }`}>
+              <span>Supports **bold**, *italic*, `code`, and [links](url)</span>
+            </div>
           </motion.div>
         </div>
       </div>

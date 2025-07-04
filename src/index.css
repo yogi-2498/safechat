@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CSS Variables for theme support */
+:root {
+  --toast-bg: rgba(255, 182, 193, 0.95);
+  --toast-text: #8B5A6B;
+}
+
+.dark {
+  --toast-bg: rgba(0, 0, 0, 0.9);
+  --toast-text: #ffffff;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -121,4 +132,83 @@ input:focus, textarea:focus, button:focus {
 /* Smooth transitions */
 * {
   transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+}
+
+/* Markdown prose styles */
+.prose {
+  max-width: none;
+}
+
+.prose p {
+  margin-bottom: 0.5rem;
+}
+
+.prose p:last-child {
+  margin-bottom: 0;
+}
+
+.prose strong {
+  font-weight: 600;
+}
+
+.prose em {
+  font-style: italic;
+}
+
+.prose code {
+  font-size: 0.875rem;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+.prose a {
+  text-decoration: underline;
+  transition: all 0.2s ease;
+}
+
+.prose a:hover {
+  text-decoration: none;
+}
+
+/* Dark mode prose styles */
+.prose-invert {
+  color: #ffffff;
+}
+
+.prose-invert strong {
+  color: #ffffff;
+}
+
+.prose-invert em {
+  color: #ffffff;
+}
+
+.prose-invert a {
+  color: #fbbf24;
+}
+
+.prose-invert a:hover {
+  color: #ffffff;
+}
+
+/* Light mode prose styles */
+.prose-gray {
+  color: #374151;
+}
+
+.prose-gray strong {
+  color: #111827;
+}
+
+.prose-gray em {
+  color: #374151;
+}
+
+.prose-gray a {
+  color: #ec4899;
+}
+
+.prose-gray a:hover {
+  color: #be185d;
 }
