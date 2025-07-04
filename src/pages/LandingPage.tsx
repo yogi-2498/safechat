@@ -1,11 +1,10 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { MessageCircle, Shield, Lock, Zap, Chrome, Mail, Eye, EyeOff, Heart, Sparkles } from 'lucide-react'
+import { Heart, Shield, Lock, Sparkles, Chrome, Mail, Eye, EyeOff } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
-import { GlassCard } from '../components/ui/GlassCard'
-import { ThemeToggle } from '../components/ui/ThemeToggle'
-import { AnimatedBackground } from '../components/3D/AnimatedIcons'
+import { Card } from '../components/ui/Card'
+import { FloatingElements } from '../components/FloatingElements'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 
@@ -16,7 +15,6 @@ export const LandingPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
-  const [isDark, setIsDark] = useState(true)
 
   const { signIn, signInWithGoogle, signUp } = useAuth()
 
@@ -37,10 +35,10 @@ export const LandingPage: React.FC = () => {
     try {
       if (isLogin) {
         await signIn(email, password)
-        toast.success('Welcome back to SafeChat! 🎉')
+        toast.success('Welcome back to SafeChat! 💕')
       } else {
         await signUp(email, password)
-        toast.success('Account created successfully! Welcome to SafeChat! 🎉')
+        toast.success('Account created successfully! Welcome to SafeChat! 💕')
       }
     } catch (error: any) {
       toast.error(error.message || 'An error occurred')
@@ -53,7 +51,7 @@ export const LandingPage: React.FC = () => {
     setIsGoogleLoading(true)
     try {
       await signInWithGoogle()
-      toast.success('Signed in with Google! Welcome to SafeChat! 🎉')
+      toast.success('Signed in with Google! Welcome to SafeChat! 💕')
     } catch (error: any) {
       toast.error(error.message || 'Google sign-in failed')
     } finally {
@@ -62,48 +60,11 @@ export const LandingPage: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen relative overflow-hidden transition-all duration-1000 ${
-      isDark 
-        ? 'bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900' 
-        : 'bg-gradient-to-br from-pink-100 via-purple-100 to-indigo-100'
-    }`}>
-      {/* 3D Animated Background */}
-      <AnimatedBackground />
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-pink-50 via-rose-50 to-purple-50">
+      {/* Floating romantic elements */}
+      <FloatingElements />
 
-      {/* Theme Toggle */}
-      <div className="absolute top-6 right-6 z-20">
-        <ThemeToggle isDark={isDark} onToggle={() => setIsDark(!isDark)} />
-      </div>
-
-      {/* Enhanced Animated Background Elements */}
-      <div className="absolute inset-0">
-        {Array.from({ length: 8 }, (_, i) => (
-          <motion.div
-            key={i}
-            className={`absolute w-96 h-96 rounded-full blur-3xl opacity-30 ${
-              isDark 
-                ? ['bg-purple-500', 'bg-pink-500', 'bg-blue-500', 'bg-cyan-500'][i % 4]
-                : ['bg-purple-300', 'bg-pink-300', 'bg-blue-300', 'bg-cyan-300'][i % 4]
-            }`}
-            style={{
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-            }}
-            animate={{
-              x: [0, 100, -50, 0],
-              y: [0, -100, 50, 0],
-              scale: [1, 1.2, 0.8, 1],
-            }}
-            transition={{
-              duration: 20 + i * 2,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: i * 2
-            }}
-          />
-        ))}
-      </div>
-
+      {/* Main content */}
       <div className="relative min-h-screen flex items-center justify-center px-4 py-8 z-10">
         <div className="w-full max-w-7xl grid lg:grid-cols-2 gap-16 items-center">
           {/* Left Side - Hero Content */}
@@ -121,27 +82,27 @@ export const LandingPage: React.FC = () => {
               className="flex items-center justify-center lg:justify-start mb-8"
             >
               <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 rounded-3xl blur-xl opacity-75 group-hover:opacity-100 transition-opacity animate-pulse" />
                 <motion.div 
-                  className="relative p-4 bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 rounded-3xl shadow-2xl transform-3d"
-                  whileHover={{ scale: 1.05, rotateY: 10 }}
-                  transition={{ duration: 0.3 }}
+                  className="relative p-4 bg-gradient-to-r from-pink-400 via-rose-400 to-purple-400 rounded-3xl shadow-2xl"
+                  whileHover={{ scale: 1.05 }}
+                  animate={{ 
+                    boxShadow: [
+                      '0 20px 40px rgba(255, 182, 193, 0.4)',
+                      '0 25px 50px rgba(255, 182, 193, 0.6)',
+                      '0 20px 40px rgba(255, 182, 193, 0.4)'
+                    ]
+                  }}
+                  transition={{ duration: 2, repeat: Infinity }}
                 >
-                  <Heart className="w-12 h-12 text-white heartbeat-animation" />
+                  <Heart className="w-12 h-12 text-white" fill="currentColor" />
                 </motion.div>
               </div>
               <div className="ml-4">
-                <h1 className={`text-5xl font-bold bg-gradient-to-r ${
-                  isDark 
-                    ? 'from-white via-purple-200 to-pink-200' 
-                    : 'from-purple-600 via-pink-600 to-blue-600'
-                } bg-clip-text text-transparent`}>
+                <h1 className="text-5xl font-bold bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 bg-clip-text text-transparent font-serif">
                   SafeChat
                 </h1>
-                <p className={`text-lg font-medium ${
-                  isDark ? 'text-purple-300' : 'text-purple-600'
-                }`}>
-                  End-to-End Encrypted • Secure • Private
+                <p className="text-rose-500 text-lg font-medium">
+                  Where Hearts Connect Securely 💕
                 </p>
               </div>
             </motion.div>
@@ -153,25 +114,19 @@ export const LandingPage: React.FC = () => {
               transition={{ duration: 0.8, delay: 0.2 }}
               className="space-y-6"
             >
-              <h2 className="text-6xl lg:text-8xl font-bold leading-tight">
-                <span className={`bg-gradient-to-r ${
-                  isDark 
-                    ? 'from-white via-purple-200 to-pink-200' 
-                    : 'from-purple-700 via-pink-700 to-blue-700'
-                } bg-clip-text text-transparent`}>
-                  Private Chat
+              <h2 className="text-6xl lg:text-8xl font-bold leading-tight font-serif">
+                <span className="bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 bg-clip-text text-transparent">
+                  Love
                 </span>
                 <br />
-                <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
-                  Redefined
+                <span className="bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 bg-clip-text text-transparent">
+                  Securely
                 </span>
               </h2>
               
-              <p className={`text-2xl lg:text-3xl leading-relaxed max-w-3xl ${
-                isDark ? 'text-white/80' : 'text-gray-700'
-              }`}>
-                Experience truly secure 1:1 conversations with military-grade encryption, 
-                screenshot protection, and YouTube watch parties. No data storage, no tracking, just pure privacy.
+              <p className="text-2xl lg:text-3xl text-gray-700 leading-relaxed max-w-3xl">
+                Experience intimate conversations with military-grade encryption. 
+                Share your heart without compromise, watch together, love together.
               </p>
             </motion.div>
 
@@ -185,21 +140,21 @@ export const LandingPage: React.FC = () => {
               {[
                 { 
                   icon: Shield, 
-                  title: 'E2E Encrypted', 
-                  desc: 'Military-grade security with screenshot protection',
-                  gradient: 'from-purple-500 to-pink-500'
+                  title: 'Protected Love', 
+                  desc: 'Your intimate moments, safely encrypted',
+                  gradient: 'from-pink-400 to-rose-400'
                 },
                 { 
                   icon: Lock, 
-                  title: 'Zero Storage', 
-                  desc: 'No message history, complete privacy',
-                  gradient: 'from-blue-500 to-cyan-500'
+                  title: 'Private Forever', 
+                  desc: 'No traces left behind, pure privacy',
+                  gradient: 'from-purple-400 to-pink-400'
                 },
                 { 
-                  icon: Zap, 
-                  title: 'YouTube Together', 
-                  desc: 'Watch videos while chatting securely',
-                  gradient: 'from-green-500 to-emerald-500'
+                  icon: Sparkles, 
+                  title: 'Watch Together', 
+                  desc: 'Share videos while staying connected',
+                  gradient: 'from-rose-400 to-purple-400'
                 }
               ].map((feature, index) => (
                 <motion.div
@@ -210,34 +165,17 @@ export const LandingPage: React.FC = () => {
                   className="group"
                   whileHover={{ y: -5 }}
                 >
-                  <GlassCard 
-                    className={`p-8 h-full transition-all duration-500 border-white/20 ${
-                      isDark 
-                        ? 'bg-gradient-to-br from-white/10 to-white/5' 
-                        : 'bg-gradient-to-br from-white/60 to-white/40'
-                    } backdrop-blur-xl relative overflow-hidden`}
-                  >
-                    <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient.replace('from-', 'from-').replace('to-', 'to-')}/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
-                    <div className="relative z-10">
-                      <motion.div 
-                        className={`inline-flex p-4 rounded-2xl bg-gradient-to-r ${feature.gradient} mb-6 shadow-2xl`}
-                        whileHover={{ scale: 1.1, rotate: 10 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <feature.icon className="w-8 h-8 text-white" />
-                      </motion.div>
-                      <h3 className={`font-bold mb-3 text-xl ${
-                        isDark ? 'text-white' : 'text-gray-800'
-                      }`}>
-                        {feature.title}
-                      </h3>
-                      <p className={`leading-relaxed ${
-                        isDark ? 'text-white/70' : 'text-gray-600'
-                      }`}>
-                        {feature.desc}
-                      </p>
-                    </div>
-                  </GlassCard>
+                  <Card className="p-8 h-full bg-white/70 backdrop-blur-xl border border-pink-200/50 hover:bg-white/80 transition-all duration-500 shadow-lg hover:shadow-xl">
+                    <motion.div 
+                      className={`inline-flex p-4 rounded-2xl bg-gradient-to-r ${feature.gradient} mb-6 shadow-lg`}
+                      whileHover={{ scale: 1.1, rotate: 5 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <feature.icon className="w-8 h-8 text-white" />
+                    </motion.div>
+                    <h3 className="font-bold text-gray-800 mb-3 text-xl font-serif">{feature.title}</h3>
+                    <p className="text-gray-600 leading-relaxed">{feature.desc}</p>
+                  </Card>
                 </motion.div>
               ))}
             </motion.div>
@@ -259,14 +197,10 @@ export const LandingPage: React.FC = () => {
                   className="text-center"
                   whileHover={{ scale: 1.05 }}
                 >
-                  <div className={`text-2xl font-bold ${
-                    isDark ? 'text-white' : 'text-gray-800'
-                  }`}>
+                  <div className="text-2xl font-bold text-gray-800 font-serif">
                     {stat.value}
                   </div>
-                  <div className={`text-sm ${
-                    isDark ? 'text-white/60' : 'text-gray-600'
-                  }`}>
+                  <div className="text-sm text-gray-600">
                     {stat.label}
                   </div>
                 </motion.div>
@@ -274,169 +208,125 @@ export const LandingPage: React.FC = () => {
             </motion.div>
           </motion.div>
 
-          {/* Right Side - Enhanced Auth Form */}
+          {/* Right Side - Auth Form */}
           <motion.div
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.3 }}
             className="w-full max-w-md mx-auto"
           >
-            <GlassCard 
-              className={`p-10 backdrop-blur-xl border shadow-2xl relative overflow-hidden ${
-                isDark 
-                  ? 'border-white/20 bg-gradient-to-br from-white/15 to-white/5' 
-                  : 'border-purple-200/50 bg-gradient-to-br from-white/80 to-white/60'
-              }`}
-            >
-              {/* Animated background */}
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-pink-500/10 opacity-50" />
-              
-              <div className="relative z-10">
-                <div className="text-center mb-10">
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ duration: 0.5, delay: 0.5 }}
-                    className="w-20 h-20 bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl transform-3d"
-                    whileHover={{ rotateY: 180 }}
-                  >
-                    <Shield className="w-10 h-10 text-white" />
-                  </motion.div>
-                  <h3 className={`text-4xl font-bold bg-gradient-to-r ${
-                    isDark 
-                      ? 'from-white to-purple-200' 
-                      : 'from-purple-600 to-pink-600'
-                  } bg-clip-text text-transparent mb-3`}>
-                    {isLogin ? 'Welcome Back' : 'Join SafeChat'}
-                  </h3>
-                  <p className={`text-lg ${
-                    isDark ? 'text-white/80' : 'text-gray-600'
-                  }`}>
-                    {isLogin ? 'Sign in to start secure conversations' : 'Create your account for private messaging'}
-                  </p>
-                </div>
-
-                {/* Google Sign In */}
-                <Button
-                  onClick={handleGoogleSignIn}
-                  variant="outline"
-                  className={`w-full mb-8 group py-4 text-lg font-semibold backdrop-blur-md ${
-                    isDark 
-                      ? 'bg-white/10 border-white/30 text-white hover:bg-white/20' 
-                      : 'bg-white/60 border-purple-300/50 text-gray-700 hover:bg-white/80'
-                  }`}
-                  size="lg"
-                  isLoading={isGoogleLoading}
+            <Card className="p-10 bg-white/80 backdrop-blur-xl border border-pink-200/50 shadow-2xl">
+              <div className="text-center mb-10">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ duration: 0.5, delay: 0.5 }}
+                  className="w-20 h-20 bg-gradient-to-r from-pink-400 via-rose-400 to-purple-400 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl"
                 >
-                  <Chrome className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform" />
-                  Continue with Google
-                </Button>
+                  <Shield className="w-10 h-10 text-white" />
+                </motion.div>
+                <h3 className="text-4xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent mb-3 font-serif">
+                  {isLogin ? 'Welcome Back' : 'Join SafeChat'}
+                </h3>
+                <p className="text-gray-600 text-lg">
+                  {isLogin ? 'Sign in to reconnect with your heart' : 'Create your account for intimate conversations'}
+                </p>
+              </div>
 
-                <div className="relative mb-8">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className={`w-full border-t ${
-                      isDark ? 'border-white/30' : 'border-gray-300'
-                    }`} />
-                  </div>
-                  <div className="relative flex justify-center text-lg">
-                    <span className={`px-6 bg-transparent font-medium ${
-                      isDark ? 'text-white/70' : 'text-gray-500'
-                    }`}>
-                      or continue with email
-                    </span>
-                  </div>
+              {/* Google Sign In */}
+              <Button
+                onClick={handleGoogleSignIn}
+                variant="outline"
+                className="w-full mb-8 bg-white/60 border-pink-300/50 text-gray-700 hover:bg-white/80 group py-4 text-lg font-semibold backdrop-blur-md"
+                size="lg"
+                isLoading={isGoogleLoading}
+              >
+                <Chrome className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform" />
+                Continue with Google
+              </Button>
+
+              <div className="relative mb-8">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-pink-300" />
                 </div>
+                <div className="relative flex justify-center text-lg">
+                  <span className="px-6 bg-white/80 text-gray-500 font-medium">
+                    or continue with email
+                  </span>
+                </div>
+              </div>
 
-                <form onSubmit={handleSubmit} className="space-y-8">
-                  <div className="relative">
-                    <Input
-                      type="email"
-                      placeholder="Enter your email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className={`py-4 text-lg focus:ring-2 focus:ring-purple-500 transition-all duration-300 ${
-                        isDark 
-                          ? 'bg-white/10 border-white/30 text-white placeholder-white/50' 
-                          : 'bg-white/60 border-purple-300/50 text-gray-800 placeholder-gray-500'
-                      } backdrop-blur-md`}
-                      icon={<Mail className="w-6 h-6" />}
-                    />
-                  </div>
-                  
-                  <div className="relative">
-                    <Input
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className={`py-4 text-lg focus:ring-2 focus:ring-purple-500 transition-all duration-300 pr-12 ${
-                        isDark 
-                          ? 'bg-white/10 border-white/30 text-white placeholder-white/50' 
-                          : 'bg-white/60 border-purple-300/50 text-gray-800 placeholder-gray-500'
-                      } backdrop-blur-md`}
-                      icon={<Lock className="w-6 h-6" />}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className={`absolute right-3 top-1/2 transform -translate-y-1/2 transition-colors ${
-                        isDark ? 'text-white/70 hover:text-white' : 'text-gray-500 hover:text-gray-700'
-                      }`}
-                    >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-700 hover:via-pink-700 hover:to-blue-700 group py-4 text-lg font-semibold shadow-2xl hover:shadow-purple-500/25"
-                    isLoading={isLoading}
-                    size="lg"
-                  >
-                    <span className="group-hover:scale-105 transition-transform flex items-center">
-                      <Sparkles className="w-5 h-5 mr-2 sparkle-animation" />
-                      {isLogin ? 'Sign In Securely' : 'Create Account'}
-                    </span>
-                  </Button>
-                </form>
-
-                <div className="mt-10 text-center">
+              <form onSubmit={handleSubmit} className="space-y-8">
+                <div className="relative">
+                  <Input
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="py-4 text-lg focus:ring-2 focus:ring-pink-400 transition-all duration-300 bg-white/60 border-pink-300/50 text-gray-800 placeholder-gray-500 backdrop-blur-md"
+                    icon={<Mail className="w-6 h-6 text-pink-400" />}
+                  />
+                </div>
+                
+                <div className="relative">
+                  <Input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="py-4 text-lg focus:ring-2 focus:ring-pink-400 transition-all duration-300 pr-12 bg-white/60 border-pink-300/50 text-gray-800 placeholder-gray-500 backdrop-blur-md"
+                    icon={<Lock className="w-6 h-6 text-pink-400" />}
+                  />
                   <button
                     type="button"
-                    onClick={() => setIsLogin(!isLogin)}
-                    className={`text-lg group transition-colors ${
-                      isDark ? 'text-white/80 hover:text-white' : 'text-gray-600 hover:text-gray-800'
-                    }`}
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
                   >
-                    {isLogin ? (
-                      <>Don't have an account? <span className="text-purple-400 font-semibold group-hover:text-purple-300 underline">Create one</span></>
-                    ) : (
-                      <>Already have an account? <span className="text-purple-400 font-semibold group-hover:text-purple-300 underline">Sign in</span></>
-                    )}
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
 
-                {/* Security Notice */}
-                <motion.div 
-                  className={`mt-8 p-4 rounded-lg border ${
-                    isDark 
-                      ? 'bg-green-500/10 border-green-500/20' 
-                      : 'bg-green-100/80 border-green-300/50'
-                  }`}
-                  whileHover={{ scale: 1.02 }}
+                <Button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-pink-500 via-rose-500 to-purple-500 hover:from-pink-600 hover:via-rose-600 hover:to-purple-600 group py-4 text-lg font-semibold shadow-2xl hover:shadow-pink-500/25"
+                  isLoading={isLoading}
+                  size="lg"
                 >
-                  <div className="flex items-center space-x-2">
-                    <Shield className="w-4 h-4 text-green-400" />
-                    <span className="text-green-400 text-sm font-medium">Your privacy is guaranteed</span>
-                  </div>
-                  <p className={`text-xs mt-1 ${
-                    isDark ? 'text-green-300/70' : 'text-green-600'
-                  }`}>
-                    We never store your messages or personal data. Everything is encrypted and temporary.
-                  </p>
-                </motion.div>
+                  <span className="group-hover:scale-105 transition-transform flex items-center">
+                    <Heart className="w-5 h-5 mr-2" fill="currentColor" />
+                    {isLogin ? 'Sign In Securely' : 'Create Account'}
+                  </span>
+                </Button>
+              </form>
+
+              <div className="mt-10 text-center">
+                <button
+                  type="button"
+                  onClick={() => setIsLogin(!isLogin)}
+                  className="text-lg group transition-colors text-gray-600 hover:text-gray-800"
+                >
+                  {isLogin ? (
+                    <>Don't have an account? <span className="text-pink-500 font-semibold group-hover:text-pink-600 underline">Create one</span></>
+                  ) : (
+                    <>Already have an account? <span className="text-pink-500 font-semibold group-hover:text-pink-600 underline">Sign in</span></>
+                  )}
+                </button>
               </div>
-            </GlassCard>
+
+              {/* Security Notice */}
+              <motion.div 
+                className="mt-8 p-4 bg-pink-50/80 border border-pink-200/50 rounded-lg backdrop-blur-md"
+                whileHover={{ scale: 1.02 }}
+              >
+                <div className="flex items-center space-x-2">
+                  <Shield className="w-4 h-4 text-pink-500" />
+                  <span className="text-pink-600 text-sm font-medium">Your heart is safe with us</span>
+                </div>
+                <p className="text-xs mt-1 text-pink-500">
+                  We never store your messages or personal data. Everything is encrypted and temporary.
+                </p>
+              </motion.div>
+            </Card>
           </motion.div>
         </div>
       </div>

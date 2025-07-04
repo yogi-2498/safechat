@@ -1,27 +1,29 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Download, Play, Pause, ImageIcon, Shield } from 'lucide-react';
-import { Message } from '../types';
-import { ImageLightbox } from './ImageLightbox';
+import React, { useState } from 'react'
+import { motion } from 'framer-motion'
+import { Download, Play, Pause, ImageIcon, Shield, Heart } from 'lucide-react'
+import { Message } from '../types'
 
 interface MessageBubbleProps {
-  message: Message;
-  isOwnMessage: boolean;
+  message: Message
+  isOwnMessage: boolean
+  onImageClick?: (imageUrl: string, imageName?: string) => void
 }
 
-export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMessage }) => {
-  const [showLightbox, setShowLightbox] = useState(false);
-
+export const MessageBubble: React.FC<MessageBubbleProps> = ({ 
+  message, 
+  isOwnMessage, 
+  onImageClick 
+}) => {
   const formatTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
+    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }
 
   const renderContent = () => {
     switch (message.type) {
       case 'text':
         return (
           <p className="whitespace-pre-wrap break-words">{message.content}</p>
-        );
+        )
       
       case 'image':
         return (
@@ -30,7 +32,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMess
               className="relative cursor-pointer overflow-hidden rounded-lg"
               whileHover={{ scale: 1.02 }}
               transition={{ duration: 0.2 }}
-              onClick={() => setShowLightbox(true)}
+              onClick={() => onImageClick?.(message.fileUrl!, message.fileName)}
             >
               <img 
                 src={message.fileUrl} 
@@ -47,7 +49,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMess
                 onContextMenu={(e) => e.preventDefault()}
               />
               
-              {/* Enhanced hover overlay with security indicator */}
+              {/* Hover overlay */}
               <motion.div
                 initial={{ opacity: 0 }}
                 whileHover={{ opacity: 1 }}
@@ -63,7 +65,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMess
               </motion.div>
               
               {/* Security indicator */}
-              <div className="absolute top-2 left-2 bg-green-500/20 border border-green-500/30 backdrop-blur-md text-green-300 text-xs px-2 py-1 rounded-full flex items-center space-x-1">
+              <div className="absolute top-2 left-2 bg-pink-500/20 border border-pink-500/30 backdrop-blur-md text-pink-300 text-xs px-2 py-1 rounded-full flex items-center space-x-1">
                 <Shield className="w-3 h-3" />
                 <span>Protected</span>
               </div>
@@ -81,66 +83,58 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMess
                 <span>No download</span>
               </div>
             </div>
-            
-            {/* Enhanced Image Lightbox */}
-            <ImageLightbox
-              isOpen={showLightbox}
-              imageUrl={message.fileUrl!}
-              imageName={message.fileName}
-              onClose={() => setShowLightbox(false)}
-            />
           </div>
-        );
+        )
       
       case 'file':
         return (
           <motion.div 
-            className="flex items-center space-x-3 p-4 bg-white/10 rounded-lg border border-white/20 hover:bg-white/15 transition-colors cursor-pointer group"
+            className="flex items-center space-x-3 p-4 bg-white/10 rounded-lg border border-pink-200/30 hover:bg-white/15 transition-colors cursor-pointer group"
             whileHover={{ scale: 1.02 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="p-3 bg-blue-500/20 rounded-lg group-hover:bg-blue-500/30 transition-colors">
-              <Download className="w-6 h-6 text-blue-400" />
+            <div className="p-3 bg-pink-500/20 rounded-lg group-hover:bg-pink-500/30 transition-colors">
+              <Download className="w-6 h-6 text-pink-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{message.fileName}</p>
+              <p className="text-sm font-medium text-gray-800 truncate">{message.fileName}</p>
               <a 
                 href={message.fileUrl}
                 download={message.fileName}
-                className="text-xs text-blue-400 hover:text-blue-300 underline"
+                className="text-xs text-pink-500 hover:text-pink-600 underline"
                 onClick={(e) => e.stopPropagation()}
               >
                 Download file
               </a>
             </div>
           </motion.div>
-        );
+        )
       
       case 'audio':
         return (
           <motion.div 
-            className="flex items-center space-x-3 p-4 bg-white/10 rounded-lg border border-white/20 hover:bg-white/15 transition-colors group"
+            className="flex items-center space-x-3 p-4 bg-white/10 rounded-lg border border-pink-200/30 hover:bg-white/15 transition-colors group"
             whileHover={{ scale: 1.02 }}
             transition={{ duration: 0.2 }}
           >
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              className="p-3 bg-green-500/20 rounded-lg group-hover:bg-green-500/30 transition-colors"
+              className="p-3 bg-pink-500/20 rounded-lg group-hover:bg-pink-500/30 transition-colors"
             >
-              <Play className="w-6 h-6 text-green-400" />
+              <Play className="w-6 h-6 text-pink-400" />
             </motion.button>
             <div className="flex-1">
-              <p className="text-sm font-medium text-white">{message.content}</p>
-              <p className="text-xs text-white/60">Audio message</p>
+              <p className="text-sm font-medium text-gray-800">{message.content}</p>
+              <p className="text-xs text-gray-600">Audio message</p>
             </div>
           </motion.div>
-        );
+        )
       
       default:
-        return <p>{message.content}</p>;
+        return <p>{message.content}</p>
     }
-  };
+  }
 
   return (
     <motion.div
@@ -152,13 +146,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMess
       <motion.div 
         className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl relative overflow-hidden group ${
           isOwnMessage 
-            ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white' 
-            : 'bg-white/10 backdrop-blur-md text-white border border-white/20'
+            ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white' 
+            : 'bg-white/80 backdrop-blur-md text-gray-800 border border-pink-200/50'
         }`}
         whileHover={{ scale: 1.02, y: -2 }}
         transition={{ duration: 0.2 }}
       >
-        {/* Enhanced bubble effect on hover */}
+        {/* Bubble effect on hover */}
         <motion.div
           className="absolute inset-0 bg-white/10 rounded-full scale-0"
           whileHover={{ 
@@ -171,7 +165,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMess
           }}
         />
         
-        {/* Enhanced gradient shimmer effect */}
+        {/* Shimmer effect */}
         <motion.div
           className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 -skew-x-12"
           whileHover={{ 
@@ -195,15 +189,15 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMess
                 <motion.div
                   animate={{ scale: [1, 1.2, 1] }}
                   transition={{ duration: 2, repeat: Infinity }}
-                  className="w-2 h-2 bg-green-400 rounded-full"
+                  className="w-2 h-2 bg-pink-200 rounded-full"
                   title="Delivered & Encrypted"
                 />
-                <span className="text-xs">E2E</span>
+                <Heart className="w-3 h-3" fill="currentColor" />
               </motion.div>
             )}
           </div>
         </div>
       </motion.div>
     </motion.div>
-  );
-};
+  )
+}

@@ -15,20 +15,18 @@ import {
   X,
   Paperclip,
   Youtube,
-  Play,
-  AlertTriangle,
+  Heart,
   Minimize2,
   Maximize2
 } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
-import { GlassCard } from '../components/ui/GlassCard'
-import { TypingIndicator } from '../components/ui/TypingIndicator'
-import { YouTubePlayer } from '../components/YouTube/YouTubePlayer'
-import { SecureImageViewer } from '../components/Chat/SecureImageViewer'
+import { Card } from '../components/ui/Card'
+import { YouTubePlayer } from '../components/YouTubePlayer'
+import { SecureImageViewer } from '../components/SecureImageViewer'
 import { MessageBubble } from '../components/MessageBubble'
 import { EmojiPicker } from '../components/EmojiPicker'
-import { AnimatedBackground } from '../components/3D/AnimatedIcons'
+import { FloatingElements } from '../components/FloatingElements'
 import { useAuth } from '../contexts/AuthContext'
 import { useChat } from '../contexts/ChatContext'
 import { useScreenshotPrevention } from '../hooks/useScreenshotPrevention'
@@ -47,14 +45,12 @@ export const ChatRoomPage: React.FC = () => {
   const [copied, setCopied] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
-  const [isTyping, setIsTyping] = useState(false)
   const [showImageViewer, setShowImageViewer] = useState(false)
   const [selectedImage, setSelectedImage] = useState<{ url: string; name?: string } | null>(null)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null)
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Enable screenshot prevention
   useScreenshotPrevention()
@@ -84,17 +80,6 @@ export const ChatRoomPage: React.FC = () => {
     }
   }, [isRecording])
 
-  // Typing indicator
-  const handleTyping = () => {
-    setIsTyping(true)
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current)
-    }
-    typingTimeoutRef.current = setTimeout(() => {
-      setIsTyping(false)
-    }, 2000)
-  }
-
   // Format recording time
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60)
@@ -107,7 +92,7 @@ export const ChatRoomPage: React.FC = () => {
     try {
       await navigator.clipboard.writeText(roomCode || '')
       setCopied(true)
-      toast.success('Room code copied! 📋')
+      toast.success('Room code copied! 💕')
       setTimeout(() => setCopied(false), 2000)
     } catch (error) {
       toast.error('Failed to copy room code')
@@ -124,7 +109,6 @@ export const ChatRoomPage: React.FC = () => {
       type: 'text'
     })
     setNewMessage('')
-    setIsTyping(false)
   }
 
   // Handle emoji selection
@@ -152,7 +136,7 @@ export const ChatRoomPage: React.FC = () => {
         fileUrl: result,
         fileName: file.name
       })
-      toast.success(`${file.type.startsWith('image/') ? 'Image' : 'File'} sent securely! 🔒`)
+      toast.success(`${file.type.startsWith('image/') ? 'Image' : 'File'} sent securely! 💕`)
     }
     reader.readAsDataURL(file)
   }
@@ -180,7 +164,7 @@ export const ChatRoomPage: React.FC = () => {
 
   // Leave room
   const handleLeaveRoom = () => {
-    toast.success('Left room successfully. All data deleted for security! 🔒')
+    toast.success('Left room successfully. All data deleted for security! 💕')
     navigate('/join')
   }
 
@@ -193,41 +177,21 @@ export const ChatRoomPage: React.FC = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 secure-content no-select relative overflow-hidden">
-      {/* 3D Animated Background */}
-      <AnimatedBackground />
-
-      {/* Enhanced Security Warning */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-orange-500/20 to-red-500/20 border-b border-orange-500/30 p-3 relative z-10"
-      >
-        <div className="flex items-center justify-center space-x-3 text-orange-300">
-          <motion.div
-            animate={{ rotate: [0, 10, -10, 0] }}
-            transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-          >
-            <AlertTriangle className="w-5 h-5" />
-          </motion.div>
-          <span className="text-sm font-medium">
-            🔒 Advanced Security Active: Screenshot protection, encryption, and privacy mode enabled
-          </span>
-          <motion.div
-            animate={{ scale: [1, 1.2, 1] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-            className="w-2 h-2 bg-green-400 rounded-full"
-          />
-        </div>
-      </motion.div>
+    <div className="h-screen flex flex-col bg-gradient-to-br from-pink-50 via-rose-50 to-purple-50 relative overflow-hidden">
+      {/* Floating romantic elements */}
+      <FloatingElements />
 
       {/* YouTube Player */}
-      <YouTubePlayer 
-        isVisible={showYouTubePlayer}
-        isMinimized={isYouTubeMinimized}
-        onClose={() => setShowYouTubePlayer(false)}
-        onToggleMinimize={() => setIsYouTubeMinimized(!isYouTubeMinimized)}
-      />
+      {showYouTubePlayer && (
+        <div className={`${isYouTubeMinimized ? 'h-0' : 'h-1/2'} transition-all duration-500 relative z-20`}>
+          <YouTubePlayer 
+            isVisible={showYouTubePlayer}
+            isMinimized={isYouTubeMinimized}
+            onClose={() => setShowYouTubePlayer(false)}
+            onToggleMinimize={() => setIsYouTubeMinimized(!isYouTubeMinimized)}
+          />
+        </div>
+      )}
 
       {/* Secure Image Viewer */}
       <SecureImageViewer
@@ -242,13 +206,13 @@ export const ChatRoomPage: React.FC = () => {
 
       {/* Chat Layout */}
       <div className={`flex-1 flex flex-col transition-all duration-500 relative z-10 ${
-        showYouTubePlayer && !isYouTubeMinimized ? 'mt-[50vh]' : ''
+        showYouTubePlayer && !isYouTubeMinimized ? 'h-1/2' : 'h-full'
       }`}>
-        {/* Enhanced Header */}
+        {/* Header */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-4 bg-black/20 backdrop-blur-md border-b border-white/10"
+          className="p-4 bg-white/70 backdrop-blur-md border-b border-pink-200/50"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-6">
@@ -257,27 +221,30 @@ export const ChatRoomPage: React.FC = () => {
                 whileHover={{ scale: 1.02 }}
               >
                 <motion.div
-                  animate={{ rotate: [0, 360] }}
-                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                  className="p-2 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full"
+                  animate={{ 
+                    scale: [1, 1.1, 1],
+                    rotate: [0, 5, -5, 0]
+                  }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                  className="p-2 bg-gradient-to-r from-pink-400 to-rose-400 rounded-full"
                 >
-                  <Shield className="w-5 h-5 text-white" />
+                  <Heart className="w-5 h-5 text-white" fill="currentColor" />
                 </motion.div>
                 <div>
                   <div className="flex items-center space-x-2">
-                    <span className="font-bold text-white text-lg">Room: {roomCode}</span>
+                    <span className="font-bold text-gray-800 text-lg font-serif">Room: {roomCode}</span>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={copyRoomCode}
-                      className="text-white/70 hover:text-white p-1 hover:bg-white/10 group"
+                      className="text-gray-600 hover:text-gray-800 p-1 hover:bg-pink-100 group"
                     >
                       <motion.div
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
                       >
                         {copied ? 
-                          <Check className="w-4 h-4 text-green-400" /> : 
+                          <Check className="w-4 h-4 text-pink-500" /> : 
                           <Copy className="w-4 h-4" />
                         }
                       </motion.div>
@@ -285,17 +252,17 @@ export const ChatRoomPage: React.FC = () => {
                   </div>
                   <div className="flex items-center space-x-4 text-sm">
                     <div className="flex items-center space-x-2">
-                      <Users className="w-4 h-4 text-blue-400" />
-                      <span className="text-white/70">{connectedUsers}/2 users</span>
+                      <Users className="w-4 h-4 text-pink-500" />
+                      <span className="text-gray-600">{connectedUsers}/2 users</span>
                     </div>
                     {isConnected && (
                       <div className="flex items-center space-x-2">
                         <motion.div
                           animate={{ scale: [1, 1.2, 1] }}
                           transition={{ duration: 1, repeat: Infinity }}
-                          className="w-2 h-2 bg-green-400 rounded-full"
+                          className="w-2 h-2 bg-pink-400 rounded-full"
                         />
-                        <span className="text-green-400 font-medium">E2E Encrypted</span>
+                        <span className="text-pink-500 font-medium">E2E Encrypted</span>
                       </div>
                     )}
                   </div>
@@ -309,11 +276,8 @@ export const ChatRoomPage: React.FC = () => {
                   variant="ghost"
                   size="sm"
                   onClick={toggleYouTubePlayer}
-                  className="text-white/70 hover:text-white hover:bg-red-500/20 group relative overflow-hidden"
+                  className="text-gray-600 hover:text-gray-800 hover:bg-pink-100 group relative overflow-hidden"
                 >
-                  <motion.div
-                    className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-pink-500/20 opacity-0 group-hover:opacity-100 transition-opacity"
-                  />
                   <Youtube className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform relative z-10" />
                   <span className="relative z-10">
                     {showYouTubePlayer ? 'Close Player' : 'Watch Together'}
@@ -326,11 +290,8 @@ export const ChatRoomPage: React.FC = () => {
                   variant="outline"
                   size="sm"
                   onClick={handleLeaveRoom}
-                  className="text-white border-white/30 hover:bg-red-500/20 hover:border-red-500/50 group relative overflow-hidden"
+                  className="text-gray-700 border-pink-300/50 hover:bg-pink-50 hover:border-pink-400/50 group relative overflow-hidden"
                 >
-                  <motion.div
-                    className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-pink-500/20 opacity-0 group-hover:opacity-100 transition-opacity"
-                  />
                   <LogOut className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform relative z-10" />
                   <span className="relative z-10">Leave</span>
                 </Button>
@@ -340,7 +301,7 @@ export const ChatRoomPage: React.FC = () => {
         </motion.div>
 
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 no-select relative">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 relative">
           <div className="relative z-10">
             <AnimatePresence>
               {messages.map((message) => (
@@ -353,20 +314,11 @@ export const ChatRoomPage: React.FC = () => {
               ))}
             </AnimatePresence>
             
-            {/* Typing Indicator */}
-            <AnimatePresence>
-              {isTyping && (
-                <div className="flex justify-start mb-4">
-                  <TypingIndicator />
-                </div>
-              )}
-            </AnimatePresence>
-            
             <div ref={messagesEndRef} />
           </div>
         </div>
 
-        {/* Enhanced Emoji Picker */}
+        {/* Emoji Picker */}
         <AnimatePresence>
           {showEmojiPicker && (
             <motion.div
@@ -381,29 +333,29 @@ export const ChatRoomPage: React.FC = () => {
           )}
         </AnimatePresence>
 
-        {/* Enhanced Recording Indicator */}
+        {/* Recording Indicator */}
         {isRecording && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="p-4 bg-gradient-to-r from-red-500/20 to-pink-500/20 backdrop-blur-md border-t border-red-500/30"
+            className="p-4 bg-pink-100/80 backdrop-blur-md border-t border-pink-200/50"
           >
             <div className="flex items-center justify-center space-x-4">
               <div className="flex items-center space-x-3">
                 <motion.div
                   animate={{ scale: [1, 1.2, 1] }}
                   transition={{ duration: 1, repeat: Infinity }}
-                  className="w-4 h-4 bg-red-500 rounded-full"
+                  className="w-4 h-4 bg-pink-500 rounded-full"
                 />
-                <Mic className="w-6 h-6 text-red-400" />
-                <span className="text-red-400 font-bold text-lg">Recording: {formatTime(recordingTime)}</span>
+                <Mic className="w-6 h-6 text-pink-500" />
+                <span className="text-pink-600 font-bold text-lg">Recording: {formatTime(recordingTime)}</span>
               </div>
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={toggleRecording}
-                  className="text-red-400 hover:bg-red-500/20 border border-red-400/30"
+                  className="text-pink-500 hover:bg-pink-100 border border-pink-300"
                 >
                   <MicOff className="w-4 h-4 mr-2" />
                   Stop & Send
@@ -413,11 +365,11 @@ export const ChatRoomPage: React.FC = () => {
           </motion.div>
         )}
 
-        {/* Enhanced Input Area */}
+        {/* Input Area */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-4 bg-black/20 backdrop-blur-md border-t border-white/10"
+          className="p-4 bg-white/70 backdrop-blur-md border-t border-pink-200/50"
         >
           <form onSubmit={handleSubmit} className="flex items-center space-x-3">
             <div className="flex space-x-2">
@@ -425,25 +377,25 @@ export const ChatRoomPage: React.FC = () => {
                 { 
                   icon: Paperclip, 
                   onClick: () => fileInputRef.current?.click(), 
-                  color: 'text-blue-400 hover:bg-blue-500/20',
+                  color: 'text-pink-500 hover:bg-pink-100',
                   tooltip: 'Attach file'
                 },
                 { 
                   icon: Image, 
                   onClick: () => fileInputRef.current?.click(), 
-                  color: 'text-green-400 hover:bg-green-500/20',
+                  color: 'text-rose-500 hover:bg-rose-100',
                   tooltip: 'Send image'
                 },
                 { 
                   icon: Smile, 
                   onClick: () => setShowEmojiPicker(!showEmojiPicker), 
-                  color: 'text-yellow-400 hover:bg-yellow-500/20',
+                  color: 'text-purple-500 hover:bg-purple-100',
                   tooltip: 'Add emoji'
                 },
                 { 
                   icon: isRecording ? MicOff : Mic, 
                   onClick: toggleRecording, 
-                  color: isRecording ? 'text-red-400 bg-red-500/20' : 'text-purple-400 hover:bg-purple-500/20',
+                  color: isRecording ? 'text-pink-500 bg-pink-100' : 'text-pink-500 hover:bg-pink-100',
                   tooltip: isRecording ? 'Stop recording' : 'Record audio'
                 }
               ].map((button, index) => (
@@ -461,11 +413,6 @@ export const ChatRoomPage: React.FC = () => {
                     disabled={isRecording && button.icon !== MicOff}
                     title={button.tooltip}
                   >
-                    <motion.div
-                      className="absolute inset-0 bg-white/10 rounded-full scale-0"
-                      whileHover={{ scale: 2, opacity: [0.3, 0] }}
-                      transition={{ duration: 0.6 }}
-                    />
                     <button.icon className="w-5 h-5 relative z-10" />
                   </Button>
                 </motion.div>
@@ -473,27 +420,19 @@ export const ChatRoomPage: React.FC = () => {
             </div>
             
             <Input
-              placeholder={isRecording ? 'Recording audio...' : 'Type your encrypted message...'}
+              placeholder={isRecording ? 'Recording audio...' : 'Type your message...'}
               value={newMessage}
-              onChange={(e) => {
-                setNewMessage(e.target.value)
-                handleTyping()
-              }}
+              onChange={(e) => setNewMessage(e.target.value)}
               disabled={isRecording}
-              className="flex-1 bg-white/10 border-white/20 text-white placeholder-white/50 focus:ring-2 focus:ring-purple-500 transition-all duration-300"
+              className="flex-1 bg-white/60 border-pink-300/50 text-gray-800 placeholder-gray-500 focus:ring-2 focus:ring-pink-400 transition-all duration-300"
             />
             
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Button 
                 type="submit" 
                 disabled={!newMessage.trim() || isRecording}
-                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 group relative overflow-hidden"
+                className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 group relative overflow-hidden"
               >
-                <motion.div
-                  className="absolute inset-0 bg-white/20 rounded-full scale-0"
-                  whileHover={{ scale: 2, opacity: [0.3, 0] }}
-                  transition={{ duration: 0.6 }}
-                />
                 <Send className="w-5 h-5 group-hover:scale-110 transition-transform relative z-10" />
               </Button>
             </motion.div>

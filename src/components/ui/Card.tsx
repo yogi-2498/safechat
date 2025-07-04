@@ -1,9 +1,9 @@
-import React, { HTMLAttributes } from 'react';
-import { motion } from 'framer-motion';
+import React, { HTMLAttributes } from 'react'
+import { motion } from 'framer-motion'
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
-  variant?: 'default' | 'glass';
+  children: React.ReactNode
+  variant?: 'default' | 'glass'
 }
 
 export const Card: React.FC<CardProps> = ({ 
@@ -12,12 +12,12 @@ export const Card: React.FC<CardProps> = ({
   variant = 'glass',
   ...props 
 }) => {
-  const baseClasses = 'rounded-2xl shadow-xl border transition-all duration-500 relative overflow-hidden';
+  const baseClasses = 'rounded-2xl shadow-xl border transition-all duration-500 relative overflow-hidden'
   
   const variants = {
     default: 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700',
     glass: 'bg-white/10 backdrop-blur-xl border-white/20 hover:bg-white/15'
-  };
+  }
 
   return (
     <motion.div
@@ -28,9 +28,9 @@ export const Card: React.FC<CardProps> = ({
       whileHover={{ y: -2 }}
       {...props}
     >
-      {/* Enhanced animated border gradient */}
+      {/* Animated border gradient */}
       <motion.div
-        className="absolute inset-0 bg-gradient-to-r from-purple-500/30 via-pink-500/30 to-blue-500/30 opacity-0 rounded-2xl"
+        className="absolute inset-0 bg-gradient-to-r from-pink-500/30 via-rose-500/30 to-purple-500/30 opacity-0 rounded-2xl"
         whileHover={{ opacity: 1 }}
         transition={{ duration: 0.3 }}
       />
@@ -53,5 +53,5 @@ export const Card: React.FC<CardProps> = ({
         {children}
       </div>
     </motion.div>
-  );
-};
+  )
+}
