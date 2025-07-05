@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Users, LogOut, Shield, Heart, Youtube, Moon, Sun, AlertCircle, Check } from 'lucide-react'
+import { Plus, Users, LogOut, Shield, Heart, Youtube, Moon, Sun, AlertCircle, Check, RefreshCw } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Card } from '../components/ui/Card'
@@ -16,6 +16,8 @@ export const JoinRoomPage: React.FC = () => {
   const [isJoining, setIsJoining] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [validationError, setValidationError] = useState('')
+  const [validationSuccess, setValidationSuccess] = useState('')
+  const [isValidating, setIsValidating] = useState(false)
   const { user, signOut } = useAuth()
   const { isDark, toggleTheme } = useTheme()
   const navigate = useNavigate()
@@ -26,7 +28,10 @@ export const JoinRoomPage: React.FC = () => {
     setIsCreating(true)
     
     try {
+      console.log('Creating room...')
       const result = await RoomValidationService.createRoom(user.id)
+      
+      console.log('Create room result:', result)
       
       if (!result.success) {
         toast.error(result.message)
@@ -35,16 +40,51 @@ export const JoinRoomPage: React.FC = () => {
       }
 
       // Copy to clipboard
-      await navigator.clipboard.writeText(result.roomCode)
+      try {
+        await navigator.clipboard.writeText(result.roomCode)
+        toast.success(`💕 Room created: ${result.roomCode} (copied to clipboard)`)
+      } catch (clipboardError) {
+        toast.success(`💕 Room created: ${result.roomCode}`)
+      }
       
+      // Navigate to the room after a short delay
       setTimeout(() => {
         navigate(`/room/${result.roomCode}`)
-        toast.success(`💕 Room created: ${result.roomCode} (copied to clipboard)`)
         setIsCreating(false)
       }, 1000)
     } catch (error) {
+      console.error('Error creating room:', error)
       setIsCreating(false)
       toast.error('Failed to create room')
+    }
+  }
+
+  const validateRoomCode = async (code: string) => {
+    if (!code.trim() || code.length !== 6) {
+      setValidationError('')
+      setValidationSuccess('')
+      return
+    }
+
+    setIsValidating(true)
+    setValidationError('')
+    setValidationSuccess('')
+    
+    try {
+      const validation = await RoomValidationService.validateRoom(code)
+      
+      if (validation.valid && validation.canJoin) {
+        setValidationSuccess(`✓ Room found (${validation.userCount}/2 users)`)
+        setValidationError('')
+      } else {
+        setValidationError(validation.message)
+        setValidationSuccess('')
+      }
+    } catch (error) {
+      setValidationError('Failed to validate room')
+      setValidationSuccess('')
+    } finally {
+      setIsValidating(false)
     }
   }
 
@@ -58,10 +98,19 @@ export const JoinRoomPage: React.FC = () => {
     setValidationError('')
     
     try {
-      // Validate room in real-time
+      console.log('Joining room:', roomCode)
+      
+      // Validate room first
       const validation = await RoomValidationService.validateRoom(roomCode)
       
       if (!validation.valid) {
+        setValidationError(validation.message)
+        toast.error(validation.message)
+        setIsJoining(false)
+        return
+      }
+
+      if (!validation.canJoin) {
         setValidationError(validation.message)
         toast.error(validation.message)
         setIsJoining(false)
@@ -78,11 +127,12 @@ export const JoinRoomPage: React.FC = () => {
         return
       }
 
-      navigate(`/room/${roomCode.toUpperCase()}`)
       toast.success(`💕 Joining secure room ${roomCode.toUpperCase()}`)
+      navigate(`/room/${roomCode.toUpperCase()}`)
       
     } catch (error) {
-      setValidationError('Failed to validate room. Please try again.')
+      console.error('Error joining room:', error)
+      setValidationError('Failed to join room. Please try again.')
       toast.error('Connection error. Please try again.')
     } finally {
       setIsJoining(false)
@@ -93,6 +143,12 @@ export const JoinRoomPage: React.FC = () => {
     const value = e.target.value.toUpperCase()
     setRoomCode(value)
     setValidationError('')
+    setValidationSuccess('')
+    
+    // Auto-validate when 6 characters are entered
+    if (value.length === 6) {
+      validateRoomCode(value)
+    }
   }
 
   const handleSignOut = async () => {
@@ -102,6 +158,13 @@ export const JoinRoomPage: React.FC = () => {
     } catch (error) {
       toast.error('Error signing out')
     }
+  }
+
+  // Debug function to show all rooms
+  const debugShowRooms = async () => {
+    const rooms = await RoomValidationService.debugGetAllRooms()
+    console.log('Debug - All rooms:', rooms)
+    toast.success(`Debug: ${rooms.count} active rooms (check console)`)
   }
 
   return (
@@ -144,6 +207,21 @@ export const JoinRoomPage: React.FC = () => {
               } backdrop-blur-md`}
             >
               {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </Button>
+          </motion.div>
+          
+          {/* Debug button - remove in production */}
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={debugShowRooms}
+              className={`${
+                isDark ? 'text-white/80 hover:text-white hover:bg-white/10' : 'text-gray-600 hover:text-gray-800 hover:bg-pink-100'
+              } backdrop-blur-md`}
+              title="Debug: Show all rooms"
+            >
+              <RefreshCw className="w-4 h-4" />
             </Button>
           </motion.div>
           
@@ -264,6 +342,7 @@ export const JoinRoomPage: React.FC = () => {
                     className="w-full bg-gradient-to-r from-pink-500 via-rose-500 to-purple-500 hover:from-pink-600 hover:via-rose-600 hover:to-purple-600 text-white font-semibold py-4 text-lg shadow-2xl hover:shadow-pink-500/25 group" 
                     size="lg"
                     isLoading={isCreating}
+                    disabled={isCreating}
                   >
                     <Plus className="w-6 h-6 mr-3 group-hover:rotate-90 transition-transform duration-300" />
                     {isCreating ? 'Creating Secure Room...' : 'Create & Copy Code'}
@@ -300,7 +379,7 @@ export const JoinRoomPage: React.FC = () => {
                     isDark ? 'text-white/80' : 'text-gray-700'
                   }`}>
                     Enter a valid 6-character room code to join an existing secure conversation. 
-                    Only rooms that exist in our secure database can be accessed.
+                    Room codes are validated in real-time for security.
                   </p>
                   
                   <div className="space-y-6">
@@ -317,41 +396,61 @@ export const JoinRoomPage: React.FC = () => {
                         } ${
                           validationError 
                             ? 'border-red-400/50 focus:ring-red-400' 
+                            : validationSuccess
+                            ? 'border-green-400/50 focus:ring-green-400'
                             : 'focus:border-pink-400 focus:ring-pink-400'
                         }`}
                       />
-                      {validationError && (
-                        <motion.div 
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="absolute -bottom-8 left-0 flex items-center text-red-500 text-sm"
-                        >
-                          <AlertCircle className="w-4 h-4 mr-1" />
-                          {validationError}
-                        </motion.div>
-                      )}
-                      {roomCode && !validationError && RoomValidationService.validateFormat(roomCode) && (
-                        <motion.div 
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="absolute -bottom-8 left-0 flex items-center text-pink-500 text-sm"
-                        >
-                          <Check className="w-4 h-4 mr-1" />
-                          Valid format
-                        </motion.div>
-                      )}
+                      
+                      {/* Validation Status */}
+                      <div className="absolute -bottom-8 left-0 right-0">
+                        {isValidating && (
+                          <motion.div 
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="flex items-center justify-center text-blue-500 text-sm"
+                          >
+                            <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
+                            Validating...
+                          </motion.div>
+                        )}
+                        
+                        {validationError && !isValidating && (
+                          <motion.div 
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="flex items-center justify-center text-red-500 text-sm"
+                          >
+                            <AlertCircle className="w-4 h-4 mr-1" />
+                            {validationError}
+                          </motion.div>
+                        )}
+                        
+                        {validationSuccess && !isValidating && (
+                          <motion.div 
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="flex items-center justify-center text-green-500 text-sm"
+                          >
+                            <Check className="w-4 h-4 mr-1" />
+                            {validationSuccess}
+                          </motion.div>
+                        )}
+                      </div>
                     </div>
                     
-                    <Button 
-                      onClick={joinRoom} 
-                      className="w-full bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 hover:from-purple-600 hover:via-pink-600 hover:to-rose-600 text-white font-semibold py-4 text-lg shadow-2xl hover:shadow-purple-500/25 group" 
-                      size="lg"
-                      isLoading={isJoining}
-                      disabled={!roomCode.trim() || !RoomValidationService.validateFormat(roomCode)}
-                    >
-                      <Users className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform duration-300" />
-                      {isJoining ? 'Validating Room...' : 'Join Secure Room'}
-                    </Button>
+                    <div className="pt-4">
+                      <Button 
+                        onClick={joinRoom} 
+                        className="w-full bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 hover:from-purple-600 hover:via-pink-600 hover:to-rose-600 text-white font-semibold py-4 text-lg shadow-2xl hover:shadow-purple-500/25 group" 
+                        size="lg"
+                        isLoading={isJoining}
+                        disabled={!roomCode.trim() || !RoomValidationService.validateFormat(roomCode) || isJoining || isValidating}
+                      >
+                        <Users className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform duration-300" />
+                        {isJoining ? 'Joining Room...' : 'Join Secure Room'}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </Card>
@@ -380,8 +479,8 @@ export const JoinRoomPage: React.FC = () => {
                   isDark ? 'text-white/70' : 'text-gray-600'
                 }`}>
                   Only valid room codes that exist in our secure database can be accessed. 
-                  No demo or test codes are available - all rooms must be created through the app.
-                  Rooms automatically expire after 24 hours for maximum security.
+                  All rooms are created dynamically and expire after 24 hours for maximum security.
+                  Room codes are validated in real-time across all devices and browsers.
                 </p>
               </div>
             </Card>

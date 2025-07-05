@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://demo.supabase.co'
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'demo-key'
 
-// Production-ready Supabase client with real room validation
+// Production-ready Supabase client with persistent room storage
 class ProductionSupabaseClient {
   private rooms = new Map<string, { 
     id: string; 
@@ -12,25 +12,66 @@ class ProductionSupabaseClient {
     expires_at: string;
     messages: any[];
     pinned_messages: any[];
+    creator_id: string;
   }>()
   
   private activeRooms = new Set<string>()
+  private storageKey = 'safechat_rooms'
 
   constructor() {
-    // No demo rooms - only dynamically created ones
+    // Load existing rooms from localStorage for persistence
+    this.loadRoomsFromStorage()
     this.cleanupExpiredRooms()
     
     // Cleanup expired rooms every 5 minutes
     setInterval(() => this.cleanupExpiredRooms(), 5 * 60 * 1000)
+    
+    // Save rooms to storage every 30 seconds
+    setInterval(() => this.saveRoomsToStorage(), 30 * 1000)
+  }
+
+  private loadRoomsFromStorage() {
+    try {
+      const stored = localStorage.getItem(this.storageKey)
+      if (stored) {
+        const data = JSON.parse(stored)
+        this.rooms = new Map(data.rooms || [])
+        this.activeRooms = new Set(data.activeRooms || [])
+        console.log(`Loaded ${this.rooms.size} rooms from storage`)
+      }
+    } catch (error) {
+      console.error('Error loading rooms from storage:', error)
+    }
+  }
+
+  private saveRoomsToStorage() {
+    try {
+      const data = {
+        rooms: Array.from(this.rooms.entries()),
+        activeRooms: Array.from(this.activeRooms),
+        lastSaved: new Date().toISOString()
+      }
+      localStorage.setItem(this.storageKey, JSON.stringify(data))
+    } catch (error) {
+      console.error('Error saving rooms to storage:', error)
+    }
   }
 
   private cleanupExpiredRooms() {
     const now = new Date()
+    let cleaned = 0
+    
     for (const [code, room] of this.rooms.entries()) {
       if (new Date(room.expires_at) < now) {
         this.rooms.delete(code)
         this.activeRooms.delete(code)
+        cleaned++
       }
+    }
+    
+    if (cleaned > 0) {
+      console.log(`Cleaned up ${cleaned} expired rooms`)
+      this.saveRoomsToStorage()
     }
   }
 
@@ -78,81 +119,149 @@ class ProductionSupabaseClient {
     }
   }
 
-  // Strict room validation - only existing rooms allowed
+  // Enhanced room validation with detailed logging
   validateRoom = async (roomCode: string) => {
     this.cleanupExpiredRooms()
-    const room = this.rooms.get(roomCode.toUpperCase())
+    const upperCode = roomCode.toUpperCase()
+    const room = this.rooms.get(upperCode)
+    
+    console.log(`Validating room ${upperCode}:`, {
+      exists: !!room,
+      totalRooms: this.rooms.size,
+      roomCodes: Array.from(this.rooms.keys())
+    })
     
     if (!room) {
-      return { exists: false, canJoin: false, userCount: 0, message: 'Room not found' }
+      return { 
+        exists: false, 
+        canJoin: false, 
+        userCount: 0, 
+        message: `Room ${upperCode} not found. Available rooms: ${Array.from(this.rooms.keys()).join(', ') || 'none'}` 
+      }
     }
 
     const now = new Date()
     const expiresAt = new Date(room.expires_at)
     
     if (now > expiresAt) {
-      this.rooms.delete(roomCode.toUpperCase())
-      this.activeRooms.delete(roomCode.toUpperCase())
-      return { exists: false, canJoin: false, userCount: 0, message: 'Room expired' }
+      this.rooms.delete(upperCode)
+      this.activeRooms.delete(upperCode)
+      this.saveRoomsToStorage()
+      return { 
+        exists: false, 
+        canJoin: false, 
+        userCount: 0, 
+        message: `Room ${upperCode} has expired` 
+      }
     }
 
+    const canJoin = room.users.length < 2
     return {
       exists: true,
-      canJoin: room.users.length < 2,
+      canJoin,
       userCount: room.users.length,
-      message: room.users.length >= 2 ? 'Room is full' : 'Room available'
+      message: canJoin ? `Room ${upperCode} is available (${room.users.length}/2 users)` : `Room ${upperCode} is full (2/2 users)`
     }
   }
 
-  // Create new room with secure code generation
+  // Enhanced room creation with guaranteed uniqueness
   createRoom = async (userId: string) => {
-    const roomCode = this.generateSecureRoomCode()
+    let roomCode = this.generateSecureRoomCode()
+    let attempts = 0
+    
+    // Ensure absolute uniqueness
+    while (this.rooms.has(roomCode) && attempts < 50) {
+      roomCode = this.generateSecureRoomCode()
+      attempts++
+    }
+    
+    if (attempts >= 50) {
+      return { data: null, error: new Error('Failed to generate unique room code') }
+    }
+    
     const room = {
       id: roomCode,
       users: [userId],
       created_at: new Date().toISOString(),
       expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
       messages: [],
-      pinned_messages: []
+      pinned_messages: [],
+      creator_id: userId
     }
     
     this.rooms.set(roomCode, room)
     this.activeRooms.add(roomCode)
+    this.saveRoomsToStorage()
+    
+    console.log(`Created room ${roomCode}:`, {
+      totalRooms: this.rooms.size,
+      roomData: room
+    })
+    
     return { data: { roomCode, room }, error: null }
   }
 
-  // Generate cryptographically secure room code
+  // Generate cryptographically secure room code with better entropy
   private generateSecureRoomCode(): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
     let result = ''
-    const array = new Uint8Array(6)
+    
+    // Use crypto.getRandomValues for better randomness
+    const array = new Uint32Array(6)
     crypto.getRandomValues(array)
     
     for (let i = 0; i < 6; i++) {
       result += chars.charAt(array[i] % chars.length)
     }
     
-    // Ensure uniqueness
-    if (this.rooms.has(result)) {
-      return this.generateSecureRoomCode()
-    }
-    
     return result
   }
 
-  // Join room with validation
+  // Enhanced room joining with better validation
   joinRoom = async (roomCode: string, userId: string) => {
-    const room = this.rooms.get(roomCode.toUpperCase())
+    const upperCode = roomCode.toUpperCase()
+    const room = this.rooms.get(upperCode)
+    
+    console.log(`User ${userId} attempting to join room ${upperCode}:`, {
+      roomExists: !!room,
+      currentUsers: room?.users || [],
+      userCount: room?.users.length || 0
+    })
+    
     if (!room) {
-      return { data: null, error: new Error('Room not found') }
+      return { 
+        data: null, 
+        error: new Error(`Room ${upperCode} not found. Please check the code or create a new room.`) 
+      }
     }
 
+    // Check if room is expired
+    const now = new Date()
+    const expiresAt = new Date(room.expires_at)
+    
+    if (now > expiresAt) {
+      this.rooms.delete(upperCode)
+      this.activeRooms.delete(upperCode)
+      this.saveRoomsToStorage()
+      return { 
+        data: null, 
+        error: new Error(`Room ${upperCode} has expired`) 
+      }
+    }
+
+    // Check if room is full (and user is not already in it)
     if (room.users.length >= 2 && !room.users.includes(userId)) {
-      return { data: null, error: new Error('Room is full') }
+      return { 
+        data: null, 
+        error: new Error(`Room ${upperCode} is full (${room.users.length}/2 users)`) 
+      }
     }
 
+    // Add user if not already in room
     if (!room.users.includes(userId)) {
       room.users.push(userId)
+      this.saveRoomsToStorage()
+      console.log(`User ${userId} joined room ${upperCode}. Users: ${room.users}`)
     }
 
     return { data: room, error: null }
@@ -186,6 +295,7 @@ class ProductionSupabaseClient {
     }
     
     room.messages.push(newMessage)
+    this.saveRoomsToStorage()
     return { data: newMessage, error: null }
   }
 
@@ -209,6 +319,7 @@ class ProductionSupabaseClient {
       room.pinned_messages.push({ ...message, pinned_at: new Date().toISOString() })
     }
 
+    this.saveRoomsToStorage()
     return { data: room.pinned_messages, error: null }
   }
 
@@ -243,6 +354,7 @@ class ProductionSupabaseClient {
       message.reactions[emoji].push(userId)
     }
 
+    this.saveRoomsToStorage()
     return { data: message, error: null }
   }
 
@@ -269,6 +381,7 @@ class ProductionSupabaseClient {
     }
 
     message.replies.push(newReply)
+    this.saveRoomsToStorage()
     return { data: newReply, error: null }
   }
 
@@ -286,9 +399,20 @@ class ProductionSupabaseClient {
     if (room.users.length === 0) {
       this.rooms.delete(roomCode.toUpperCase())
       this.activeRooms.delete(roomCode.toUpperCase())
+      console.log(`Deleted empty room ${roomCode.toUpperCase()}`)
     }
 
+    this.saveRoomsToStorage()
     return { data: { success: true }, error: null }
+  }
+
+  // Get all active rooms (for debugging)
+  getAllRooms = () => {
+    return {
+      rooms: Array.from(this.rooms.entries()),
+      activeRooms: Array.from(this.activeRooms),
+      count: this.rooms.size
+    }
   }
 
   from = (table: string) => ({
