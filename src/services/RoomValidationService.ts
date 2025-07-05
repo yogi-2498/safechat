@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase'
 
-// Enhanced room validation service with real database integration
+// Production room validation service - no demo codes
 export class RoomValidationService {
   // Validate room code format
   static validateFormat(code: string): boolean {
@@ -27,7 +27,7 @@ export class RoomValidationService {
       if (!validation.exists) {
         return {
           valid: false,
-          message: `Room "${upperCode}" not found or has expired. Please check the code and try again.`,
+          message: 'Room not found. Please check the code or create a new room.',
           canJoin: false,
           userCount: 0
         }
@@ -44,7 +44,7 @@ export class RoomValidationService {
 
       return {
         valid: true,
-        message: `Successfully validated room ${upperCode}`,
+        message: `Room ${upperCode} is available`,
         canJoin: true,
         userCount: validation.userCount
       }
@@ -76,29 +76,8 @@ export class RoomValidationService {
   // Create a new room
   static async createRoom(userId: string): Promise<{ roomCode: string; success: boolean; message: string }> {
     try {
-      let roomCode = this.generateRoomCode()
-      let attempts = 0
-      
-      // Ensure unique room code
-      while (attempts < 10) {
-        const validation = await (supabase as any).validateRoom(roomCode)
-        if (!validation.exists) {
-          break
-        }
-        roomCode = this.generateRoomCode()
-        attempts++
-      }
-
-      if (attempts >= 10) {
-        return {
-          roomCode: '',
-          success: false,
-          message: 'Failed to generate unique room code. Please try again.'
-        }
-      }
-
       // Create room in database
-      const result = await (supabase as any).createRoom(roomCode, userId)
+      const result = await (supabase as any).createRoom(userId)
       
       if (result.error) {
         return {
@@ -109,9 +88,9 @@ export class RoomValidationService {
       }
 
       return {
-        roomCode,
+        roomCode: result.data.roomCode,
         success: true,
-        message: `Room ${roomCode} created successfully!`
+        message: `Room ${result.data.roomCode} created successfully!`
       }
     } catch (error) {
       return {
@@ -146,8 +125,8 @@ export class RoomValidationService {
     }
   }
 
-  // Get demo room codes for testing
+  // No demo codes in production
   static getValidCodes(): string[] {
-    return ['ABC123', 'TEST01', 'DEMO99', 'SECURE', 'CHAT01', 'LOVE01', 'HEART2', 'KISS99', 'SWEET1', 'HONEY3']
+    return []
   }
 }

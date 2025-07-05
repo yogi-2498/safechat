@@ -300,7 +300,7 @@ export const JoinRoomPage: React.FC = () => {
                     isDark ? 'text-white/80' : 'text-gray-700'
                   }`}>
                     Enter a valid 6-character room code to join an existing secure conversation. 
-                    Room codes are validated in real-time against our secure database.
+                    Only rooms that exist in our secure database can be accessed.
                   </p>
                   
                   <div className="space-y-6">
@@ -358,7 +358,7 @@ export const JoinRoomPage: React.FC = () => {
             </motion.div>
           </div>
 
-          {/* Demo Room Codes */}
+          {/* Security Notice */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -374,29 +374,14 @@ export const JoinRoomPage: React.FC = () => {
                 <h3 className={`text-xl font-bold mb-3 font-serif ${
                   isDark ? 'text-white' : 'text-gray-800'
                 }`}>
-                  Demo Room Codes (for testing)
+                  🔒 Production Security Notice
                 </h3>
-                <div className="flex flex-wrap justify-center gap-3">
-                  {RoomValidationService.getValidCodes().slice(0, 5).map((code) => (
-                    <motion.button
-                      key={code}
-                      onClick={() => setRoomCode(code)}
-                      className={`px-4 py-2 backdrop-blur-md rounded-lg border font-mono tracking-wider transition-colors ${
-                        isDark 
-                          ? 'bg-white/10 border-white/20 text-white hover:bg-white/20' 
-                          : 'bg-white/60 border-pink-200/50 text-gray-800 hover:bg-white/80'
-                      }`}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      {code}
-                    </motion.button>
-                  ))}
-                </div>
-                <p className={`text-sm mt-3 ${
+                <p className={`text-sm ${
                   isDark ? 'text-white/70' : 'text-gray-600'
                 }`}>
-                  Click any code above to test room validation, or create your own room
+                  Only valid room codes that exist in our secure database can be accessed. 
+                  No demo or test codes are available - all rooms must be created through the app.
+                  Rooms automatically expire after 24 hours for maximum security.
                 </p>
               </div>
             </Card>

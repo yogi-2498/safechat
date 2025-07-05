@@ -19,22 +19,26 @@ import {
   ArrowDown,
   Moon,
   Sun,
-  ArrowUp
+  ArrowUp,
+  Pin,
+  MoreHorizontal
 } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Card } from '../components/ui/Card'
-import { YouTubePlayer } from '../components/YouTubePlayer'
+import { YouTubePlayer } from '../components/YouTube/YouTubePlayer'
 import { SecureImageViewer } from '../components/SecureImageViewer'
 import { MessageBubble } from '../components/MessageBubble'
 import { EmojiPicker } from '../components/EmojiPicker'
+import { MessageActions } from '../components/Chat/MessageActions'
+import { PinnedMessages } from '../components/Chat/PinnedMessages'
 import { FloatingElements } from '../components/FloatingElements'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { useAuth } from '../contexts/AuthContext'
 import { useChat } from '../contexts/ChatContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useScreenshotPrevention } from '../hooks/useScreenshotPrevention'
-import ReactMarkdown from 'react-markdown'
+import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
 export const ChatRoomPage: React.FC = () => {
@@ -54,6 +58,13 @@ export const ChatRoomPage: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<{ url: string; name?: string } | null>(null)
   const [showScrollButton, setShowScrollButton] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
+  const [showMessageActions, setShowMessageActions] = useState<{
+    messageId: string;
+    position: { x: number; y: number };
+  } | null>(null)
+  const [replyingTo, setReplyingTo] = useState<string | null>(null)
+  const [pinnedMessages, setPinnedMessages] = useState<any[]>([])
+  const [showPinnedMessages, setShowPinnedMessages] = useState(false)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
@@ -83,6 +94,22 @@ export const ChatRoomPage: React.FC = () => {
     container.addEventListener('scroll', handleScroll)
     return () => container.removeEventListener('scroll', handleScroll)
   }, [])
+
+  // Load pinned messages
+  useEffect(() => {
+    if (roomCode) {
+      loadPinnedMessages()
+    }
+  }, [roomCode])
+
+  const loadPinnedMessages = async () => {
+    try {
+      const { data } = await (supabase as any).getPinnedMessages(roomCode)
+      setPinnedMessages(data || [])
+    } catch (error) {
+      console.error('Error loading pinned messages:', error)
+    }
+  }
 
   // Recording timer
   useEffect(() => {
@@ -139,8 +166,17 @@ export const ChatRoomPage: React.FC = () => {
     e.preventDefault()
     if (!newMessage.trim()) return
     
+    let content = newMessage
+    if (replyingTo) {
+      const replyMessage = messages.find(m => m.id === replyingTo)
+      if (replyMessage) {
+        content = `> ${replyMessage.content.substring(0, 50)}${replyMessage.content.length > 50 ? '...' : ''}\n\n${newMessage}`
+      }
+      setReplyingTo(null)
+    }
+    
     sendMessage({
-      content: newMessage,
+      content,
       type: 'text'
     })
     setNewMessage('')
@@ -183,6 +219,42 @@ export const ChatRoomPage: React.FC = () => {
     setShowImageViewer(true)
   }
 
+  // Handle long press for message actions
+  const handleMessageLongPress = (messageId: string, event: React.MouseEvent) => {
+    event.preventDefault()
+    setShowMessageActions({
+      messageId,
+      position: { x: event.clientX, y: event.clientY }
+    })
+  }
+
+  // Handle message reply
+  const handleReply = (messageId: string) => {
+    setReplyingTo(messageId)
+    setShowMessageActions(null)
+  }
+
+  // Handle message reaction
+  const handleReact = async (messageId: string, emoji: string) => {
+    try {
+      await (supabase as any).addReaction(roomCode, messageId, emoji, user?.id)
+      toast.success(`Reacted with ${emoji}`)
+    } catch (error) {
+      toast.error('Failed to add reaction')
+    }
+  }
+
+  // Handle pin message
+  const handlePin = async (messageId: string) => {
+    try {
+      await (supabase as any).pinMessage(roomCode, messageId)
+      await loadPinnedMessages()
+      toast.success('Message pinned!')
+    } catch (error) {
+      toast.error('Failed to pin message')
+    }
+  }
+
   // Handle audio recording
   const toggleRecording = () => {
     if (isRecording) {
@@ -198,10 +270,16 @@ export const ChatRoomPage: React.FC = () => {
     }
   }
 
-  // Leave room
-  const handleLeaveRoom = () => {
-    toast.success('Left room successfully. All data deleted for security! 💕')
-    navigate('/join')
+  // Leave room with cleanup
+  const handleLeaveRoom = async () => {
+    try {
+      await (supabase as any).leaveRoom(roomCode, user?.id)
+      toast.success('Left room successfully. All data deleted for security! 💕')
+      navigate('/join')
+    } catch (error) {
+      toast.error('Error leaving room')
+      navigate('/join')
+    }
   }
 
   // Toggle YouTube player
@@ -246,11 +324,26 @@ export const ChatRoomPage: React.FC = () => {
         }}
       />
 
+      {/* Message Actions */}
+      {showMessageActions && (
+        <MessageActions
+          messageId={showMessageActions.messageId}
+          isOwnMessage={messages.find(m => m.id === showMessageActions.messageId)?.senderId === user?.id}
+          isPinned={pinnedMessages.some(p => p.id === showMessageActions.messageId)}
+          reactions={{}}
+          onReply={handleReply}
+          onReact={handleReact}
+          onPin={handlePin}
+          onClose={() => setShowMessageActions(null)}
+          position={showMessageActions.position}
+        />
+      )}
+
       {/* Split Screen Layout */}
       <div className="flex-1 flex flex-col relative z-10">
-        {/* YouTube Player - Top Half */}
+        {/* YouTube Player - Top Half (Fixed) */}
         {showYouTubePlayer && (
-          <div className={`h-1/2 border-b-2 ${
+          <div className={`h-1/2 border-b-2 flex-shrink-0 ${
             isDark ? 'border-white/20' : 'border-pink-200/50'
           }`}>
             <YouTubePlayer 
@@ -339,6 +432,24 @@ export const ChatRoomPage: React.FC = () => {
               </div>
               
               <div className="flex items-center space-x-2">
+                {pinnedMessages.length > 0 && (
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowPinnedMessages(!showPinnedMessages)}
+                      className={`${
+                        isDark 
+                          ? 'text-white/70 hover:text-white hover:bg-white/10' 
+                          : 'text-gray-600 hover:text-gray-800 hover:bg-pink-100'
+                      } group relative overflow-hidden`}
+                    >
+                      <Pin className="w-4 h-4 mr-2" />
+                      {pinnedMessages.length}
+                    </Button>
+                  </motion.div>
+                )}
+                
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                   <Button
                     variant="ghost"
@@ -391,7 +502,51 @@ export const ChatRoomPage: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* Messages Area with Scrollback Support */}
+          {/* Pinned Messages */}
+          {showPinnedMessages && (
+            <PinnedMessages
+              pinnedMessages={pinnedMessages}
+              onUnpin={handlePin}
+              onClose={() => setShowPinnedMessages(false)}
+            />
+          )}
+
+          {/* Reply Preview */}
+          {replyingTo && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`p-3 border-b ${
+                isDark 
+                  ? 'bg-purple-500/20 border-purple-400/30' 
+                  : 'bg-pink-100/90 border-pink-200/50'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="w-1 h-8 bg-pink-500 rounded-full" />
+                  <div>
+                    <p className="text-xs text-pink-600 font-medium">Replying to:</p>
+                    <p className={`text-sm truncate max-w-xs ${
+                      isDark ? 'text-white' : 'text-gray-800'
+                    }`}>
+                      {messages.find(m => m.id === replyingTo)?.content}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setReplyingTo(null)}
+                  className="text-pink-500 hover:bg-pink-100"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Messages Area with Full Scrollback Support */}
           <div 
             ref={messagesContainerRef}
             className="flex-1 overflow-y-auto p-4 space-y-4 relative scroll-smooth"
@@ -420,13 +575,27 @@ export const ChatRoomPage: React.FC = () => {
 
               <AnimatePresence>
                 {messages.map((message) => (
-                  <MessageBubble
+                  <div
                     key={message.id}
-                    message={message}
-                    isOwnMessage={message.senderId === user?.id}
-                    onImageClick={handleImageClick}
-                    supportMarkdown={true}
-                  />
+                    onContextMenu={(e) => handleMessageLongPress(message.id, e)}
+                    onTouchStart={(e) => {
+                      const touch = e.touches[0]
+                      setTimeout(() => {
+                        handleMessageLongPress(message.id, {
+                          clientX: touch.clientX,
+                          clientY: touch.clientY,
+                          preventDefault: () => {}
+                        } as any)
+                      }, 500)
+                    }}
+                  >
+                    <MessageBubble
+                      message={message}
+                      isOwnMessage={message.senderId === user?.id}
+                      onImageClick={handleImageClick}
+                      supportMarkdown={true}
+                    />
+                  </div>
                 ))}
               </AnimatePresence>
               
@@ -600,7 +769,7 @@ export const ChatRoomPage: React.FC = () => {
               </div>
               
               <Input
-                placeholder={isRecording ? 'Recording audio...' : 'Type your message... (Markdown supported)'}
+                placeholder={isRecording ? 'Recording audio...' : replyingTo ? 'Reply to message...' : 'Type your message... (Markdown supported)'}
                 value={newMessage}
                 onChange={(e) => {
                   setNewMessage(e.target.value)
@@ -629,7 +798,7 @@ export const ChatRoomPage: React.FC = () => {
             <div className={`mt-2 text-xs ${
               isDark ? 'text-white/50' : 'text-gray-500'
             }`}>
-              <span>Supports **bold**, *italic*, `code`, and [links](url)</span>
+              <span>Supports **bold**, *italic*, `code`, and [links](url) • Long press messages for actions</span>
             </div>
           </motion.div>
         </div>
@@ -643,6 +812,14 @@ export const ChatRoomPage: React.FC = () => {
         onChange={handleFileUpload}
         className="hidden"
       />
+
+      {/* Click outside to close actions */}
+      {showMessageActions && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setShowMessageActions(null)}
+        />
+      )}
     </div>
   )
 }
