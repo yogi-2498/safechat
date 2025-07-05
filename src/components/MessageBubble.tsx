@@ -28,43 +28,44 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     switch (message.type) {
       case 'text':
         return supportMarkdown ? (
-          <ReactMarkdown 
-            className={`prose prose-sm max-w-none ${
-              isOwnMessage 
-                ? 'prose-invert' 
-                : isDark ? 'prose-invert' : 'prose-gray'
-            }`}
-            components={{
-              p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-              strong: ({ children }) => <strong className="font-bold">{children}</strong>,
-              em: ({ children }) => <em className="italic">{children}</em>,
-              code: ({ children }) => (
-                <code className={`px-1 py-0.5 rounded text-sm ${
-                  isOwnMessage 
-                    ? 'bg-white/20 text-white' 
-                    : isDark ? 'bg-gray-700 text-gray-200' : 'bg-gray-200 text-gray-800'
-                }`}>
-                  {children}
-                </code>
-              ),
-              a: ({ href, children }) => (
-                <a 
-                  href={href} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className={`underline hover:no-underline ${
+          <div className={`prose prose-sm max-w-none ${
+            isOwnMessage 
+              ? 'prose-invert' 
+              : isDark ? 'prose-invert' : 'prose-gray'
+          }`}>
+            <ReactMarkdown 
+              components={{
+                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+                em: ({ children }) => <em className="italic">{children}</em>,
+                code: ({ children }) => (
+                  <code className={`px-1 py-0.5 rounded text-sm ${
                     isOwnMessage 
-                      ? 'text-pink-200 hover:text-white' 
-                      : 'text-pink-500 hover:text-pink-600'
-                  }`}
-                >
-                  {children}
-                </a>
-              )
-            }}
-          >
-            {message.content}
-          </ReactMarkdown>
+                      ? 'bg-white/20 text-white' 
+                      : isDark ? 'bg-gray-700 text-gray-200' : 'bg-gray-200 text-gray-800'
+                  }`}>
+                    {children}
+                  </code>
+                ),
+                a: ({ href, children }) => (
+                  <a 
+                    href={href} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className={`underline hover:no-underline ${
+                      isOwnMessage 
+                        ? 'text-pink-200 hover:text-white' 
+                        : 'text-pink-500 hover:text-pink-600'
+                    }`}
+                  >
+                    {children}
+                  </a>
+                )
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+          </div>
         ) : (
           <p className="whitespace-pre-wrap break-words leading-relaxed">{message.content}</p>
         )
