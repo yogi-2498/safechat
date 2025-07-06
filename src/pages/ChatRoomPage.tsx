@@ -19,9 +19,7 @@ import {
   ArrowDown,
   Moon,
   Sun,
-  ArrowUp,
-  Pin,
-  MoreHorizontal
+  Pin
 } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -30,8 +28,6 @@ import { YouTubePlayer } from '../components/YouTube/YouTubePlayer'
 import { SecureImageViewer } from '../components/SecureImageViewer'
 import { MessageBubble } from '../components/MessageBubble'
 import { EmojiPicker } from '../components/EmojiPicker'
-import { MessageActions } from '../components/Chat/MessageActions'
-import { PinnedMessages } from '../components/Chat/PinnedMessages'
 import { FloatingElements } from '../components/FloatingElements'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { useAuth } from '../contexts/AuthContext'
@@ -57,45 +53,18 @@ export const ChatRoomPage: React.FC = () => {
   const [showImageViewer, setShowImageViewer] = useState(false)
   const [selectedImage, setSelectedImage] = useState<{ url: string; name?: string } | null>(null)
   const [showScrollButton, setShowScrollButton] = useState(false)
-  const [isTyping, setIsTyping] = useState(false)
-  const [showMessageActions, setShowMessageActions] = useState<{
-    messageId: string;
-    position: { x: number; y: number };
-  } | null>(null)
-  const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [pinnedMessages, setPinnedMessages] = useState<any[]>([])
-  const [showPinnedMessages, setShowPinnedMessages] = useState(false)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null)
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Enable screenshot prevention
   useScreenshotPrevention()
 
-  // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Check if scroll button should be shown
-  useEffect(() => {
-    const container = messagesContainerRef.current
-    if (!container) return
-
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = container
-      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100
-      setShowScrollButton(!isNearBottom)
-    }
-
-    container.addEventListener('scroll', handleScroll)
-    return () => container.removeEventListener('scroll', handleScroll)
-  }, [])
-
-  // Load pinned messages
   useEffect(() => {
     if (roomCode) {
       loadPinnedMessages()
@@ -104,92 +73,40 @@ export const ChatRoomPage: React.FC = () => {
 
   const loadPinnedMessages = async () => {
     try {
-      const { data } = await (supabase as any).getPinnedMessages(roomCode)
+      const { data } = supabase.getPinnedMessages(roomCode!)
       setPinnedMessages(data || [])
     } catch (error) {
       console.error('Error loading pinned messages:', error)
     }
   }
 
-  // Recording timer
-  useEffect(() => {
-    if (isRecording) {
-      recordingIntervalRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1)
-      }, 1000)
-    } else {
-      if (recordingIntervalRef.current) {
-        clearInterval(recordingIntervalRef.current)
-      }
-      setRecordingTime(0)
-    }
-
-    return () => {
-      if (recordingIntervalRef.current) {
-        clearInterval(recordingIntervalRef.current)
-      }
-    }
-  }, [isRecording])
-
-  // Typing indicator
-  const handleTyping = () => {
-    setIsTyping(true)
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current)
-    }
-    typingTimeoutRef.current = setTimeout(() => {
-      setIsTyping(false)
-    }, 2000)
-  }
-
-  // Format recording time
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, '0')}`
-  }
-
-  // Copy room code
   const copyRoomCode = async () => {
     try {
       await navigator.clipboard.writeText(roomCode || '')
       setCopied(true)
-      toast.success('Room code copied! 💕')
+      toast.success('Room code copied!')
       setTimeout(() => setCopied(false), 2000)
     } catch (error) {
       toast.error('Failed to copy room code')
     }
   }
 
-  // Send text message with Markdown support
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!newMessage.trim()) return
     
-    let content = newMessage
-    if (replyingTo) {
-      const replyMessage = messages.find(m => m.id === replyingTo)
-      if (replyMessage) {
-        content = `> ${replyMessage.content.substring(0, 50)}${replyMessage.content.length > 50 ? '...' : ''}\n\n${newMessage}`
-      }
-      setReplyingTo(null)
-    }
-    
     sendMessage({
-      content,
+      content: newMessage,
       type: 'text'
     })
     setNewMessage('')
-    setIsTyping(false)
   }
 
-  // Handle emoji selection
   const handleEmojiSelect = (emoji: string) => {
     setNewMessage(prev => prev + emoji)
     setShowEmojiPicker(false)
   }
 
-  // Handle file upload
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -208,81 +125,45 @@ export const ChatRoomPage: React.FC = () => {
         fileUrl: result,
         fileName: file.name
       })
-      toast.success(`${file.type.startsWith('image/') ? 'Image' : 'File'} sent securely! 💕`)
+      toast.success('File sent!')
     }
     reader.readAsDataURL(file)
   }
 
-  // Handle image click
   const handleImageClick = (imageUrl: string, imageName?: string) => {
     setSelectedImage({ url: imageUrl, name: imageName })
     setShowImageViewer(true)
   }
 
-  // Handle long press for message actions
-  const handleMessageLongPress = (messageId: string, event: React.MouseEvent) => {
-    event.preventDefault()
-    setShowMessageActions({
-      messageId,
-      position: { x: event.clientX, y: event.clientY }
-    })
-  }
-
-  // Handle message reply
-  const handleReply = (messageId: string) => {
-    setReplyingTo(messageId)
-    setShowMessageActions(null)
-  }
-
-  // Handle message reaction
-  const handleReact = async (messageId: string, emoji: string) => {
-    try {
-      await (supabase as any).addReaction(roomCode, messageId, emoji, user?.id)
-      toast.success(`Reacted with ${emoji}`)
-    } catch (error) {
-      toast.error('Failed to add reaction')
-    }
-  }
-
-  // Handle pin message
   const handlePin = async (messageId: string) => {
     try {
-      const isAlreadyPinned = pinnedMessages.some(p => p.id === messageId)
-      
-      if (isAlreadyPinned) {
-        await (supabase as any).unpinMessage(roomCode, messageId)
-        toast.success('Message unpinned!')
-      } else {
-        await (supabase as any).pinMessage(roomCode, messageId)
-        toast.success('Message pinned!')
-      }
-      
+      await supabase.pinMessage(roomCode!, messageId)
       await loadPinnedMessages()
+      toast.success('Message pinned!')
     } catch (error) {
-      toast.error('Failed to update pin status')
+      toast.error('Failed to pin message')
     }
   }
 
-  // Handle audio recording
   const toggleRecording = () => {
     if (isRecording) {
       setIsRecording(false)
       sendMessage({
-        content: `Audio message (${formatTime(recordingTime)})`,
+        content: `Audio message (${Math.floor(recordingTime / 60)}:${(recordingTime % 60).toString().padStart(2, '0')})`,
         type: 'audio'
       })
-      toast.success('Audio message sent securely! 🎵')
+      setRecordingTime(0)
+      toast.success('Audio message sent!')
     } else {
       setIsRecording(true)
-      toast.success('Recording started... 🎤')
+      toast.success('Recording started...')
     }
   }
 
-  // Leave room with cleanup
   const handleLeaveRoom = async () => {
     try {
-      await (supabase as any).leaveRoom(roomCode, user?.id)
-      toast.success('Left room successfully. All data deleted for security! 💕')
+      await supabase.leaveRoom(roomCode!, user?.id!)
+      toast.success('Left room successfully!')
       navigate('/join')
     } catch (error) {
       toast.error('Error leaving room')
@@ -290,22 +171,8 @@ export const ChatRoomPage: React.FC = () => {
     }
   }
 
-  // Toggle YouTube player
-  const toggleYouTubePlayer = () => {
-    setShowYouTubePlayer(!showYouTubePlayer)
-    if (!showYouTubePlayer) {
-      toast.success('YouTube player opened! Watch together! 🎬')
-    }
-  }
-
-  // Scroll to bottom
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
-  // Scroll to top
-  const scrollToTop = () => {
-    messagesContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   if (isLoading) {
@@ -318,10 +185,8 @@ export const ChatRoomPage: React.FC = () => {
         ? 'bg-gradient-to-br from-gray-900 via-purple-900 to-pink-900' 
         : 'bg-gradient-to-br from-pink-50 via-rose-50 to-purple-50'
     }`}>
-      {/* Floating romantic elements */}
       <FloatingElements />
 
-      {/* Secure Image Viewer */}
       <SecureImageViewer
         isOpen={showImageViewer}
         imageUrl={selectedImage?.url || ''}
@@ -332,28 +197,9 @@ export const ChatRoomPage: React.FC = () => {
         }}
       />
 
-      {/* Message Actions */}
-      {showMessageActions && (
-        <MessageActions
-          messageId={showMessageActions.messageId}
-          isOwnMessage={messages.find(m => m.id === showMessageActions.messageId)?.senderId === user?.id}
-          isPinned={pinnedMessages.some(p => p.id === showMessageActions.messageId)}
-          reactions={{}}
-          onReply={handleReply}
-          onReact={handleReact}
-          onPin={handlePin}
-          onClose={() => setShowMessageActions(null)}
-          position={showMessageActions.position}
-        />
-      )}
-
-      {/* Split Screen Layout */}
       <div className="flex-1 flex flex-col relative z-10">
-        {/* YouTube Player - Top Half (Fixed) */}
         {showYouTubePlayer && (
-          <div className={`h-1/2 border-b-2 flex-shrink-0 ${
-            isDark ? 'border-white/20' : 'border-pink-200/50'
-          }`}>
+          <div className="h-1/2 border-b-2 flex-shrink-0">
             <YouTubePlayer 
               isVisible={showYouTubePlayer}
               onClose={() => setShowYouTubePlayer(false)}
@@ -361,60 +207,29 @@ export const ChatRoomPage: React.FC = () => {
           </div>
         )}
 
-        {/* Chat Section - Bottom Half or Full Screen */}
-        <div className={`${showYouTubePlayer ? 'h-1/2' : 'h-full'} flex flex-col transition-all duration-500`}>
-          {/* Sticky Chat Header */}
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`sticky top-0 z-20 p-4 backdrop-blur-md border-b flex-shrink-0 ${
-              isDark 
-                ? 'bg-black/20 border-white/10' 
-                : 'bg-white/80 border-pink-200/50'
-            }`}
-          >
+        <div className={`${showYouTubePlayer ? 'h-1/2' : 'h-full'} flex flex-col`}>
+          {/* Header */}
+          <div className={`p-4 backdrop-blur-md border-b flex-shrink-0 ${
+            isDark ? 'bg-black/20 border-white/10' : 'bg-white/80 border-pink-200/50'
+          }`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <motion.div 
-                  className="flex items-center space-x-3 group"
-                  whileHover={{ scale: 1.02 }}
-                >
-                  <motion.div
-                    animate={{ 
-                      scale: [1, 1.1, 1],
-                      rotate: [0, 5, -5, 0]
-                    }}
-                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                    className="p-2 bg-gradient-to-r from-pink-400 to-rose-400 rounded-full shadow-lg"
-                  >
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-gradient-to-r from-pink-400 to-rose-400 rounded-full shadow-lg">
                     <Heart className="w-5 h-5 text-white" fill="currentColor" />
-                  </motion.div>
+                  </div>
                   <div>
                     <div className="flex items-center space-x-2">
-                      <span className={`font-bold text-lg font-serif ${
-                        isDark ? 'text-white' : 'text-gray-800'
-                      }`}>
+                      <span className={`font-bold text-lg ${isDark ? 'text-white' : 'text-gray-800'}`}>
                         Room: {roomCode}
                       </span>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={copyRoomCode}
-                        className={`p-1 group ${
-                          isDark 
-                            ? 'text-white/70 hover:text-white hover:bg-white/10' 
-                            : 'text-gray-600 hover:text-gray-800 hover:bg-pink-100'
-                        }`}
+                        className="p-1"
                       >
-                        <motion.div
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                        >
-                          {copied ? 
-                            <Check className="w-4 h-4 text-pink-500" /> : 
-                            <Copy className="w-4 h-4" />
-                          }
-                        </motion.div>
+                        {copied ? <Check className="w-4 h-4 text-pink-500" /> : <Copy className="w-4 h-4" />}
                       </Button>
                     </div>
                     <div className="flex items-center space-x-4 text-sm">
@@ -426,393 +241,137 @@ export const ChatRoomPage: React.FC = () => {
                       </div>
                       {isConnected && (
                         <div className="flex items-center space-x-2">
-                          <motion.div
-                            animate={{ scale: [1, 1.2, 1] }}
-                            transition={{ duration: 1, repeat: Infinity }}
-                            className="w-2 h-2 bg-pink-400 rounded-full"
-                          />
-                          <span className="text-pink-500 font-medium">E2E Encrypted</span>
+                          <div className="w-2 h-2 bg-pink-400 rounded-full animate-pulse" />
+                          <span className="text-pink-500 font-medium">Connected</span>
                         </div>
                       )}
                     </div>
                   </div>
-                </motion.div>
+                </div>
               </div>
               
               <div className="flex items-center space-x-2">
-                {pinnedMessages.length > 0 && (
-                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowPinnedMessages(!showPinnedMessages)}
-                      className={`${
-                        isDark 
-                          ? 'text-white/70 hover:text-white hover:bg-white/10' 
-                          : 'text-gray-600 hover:text-gray-800 hover:bg-pink-100'
-                      } group relative overflow-hidden`}
-                    >
-                      <Pin className="w-4 h-4 mr-2" />
-                      {pinnedMessages.length}
-                    </Button>
-                  </motion.div>
-                )}
+                <Button variant="ghost" size="sm" onClick={toggleTheme}>
+                  {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                </Button>
                 
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={toggleTheme}
-                    className={`${
-                      isDark 
-                        ? 'text-white/70 hover:text-white hover:bg-white/10' 
-                        : 'text-gray-600 hover:text-gray-800 hover:bg-pink-100'
-                    } group relative overflow-hidden`}
-                  >
-                    {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                  </Button>
-                </motion.div>
+                <Button variant="ghost" size="sm" onClick={() => setShowYouTubePlayer(!showYouTubePlayer)}>
+                  <Youtube className="w-5 h-5 mr-2" />
+                  {showYouTubePlayer ? 'Close Player' : 'Watch Together'}
+                </Button>
                 
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={toggleYouTubePlayer}
-                    className={`group relative overflow-hidden ${
-                      isDark 
-                        ? 'text-white/70 hover:text-white hover:bg-red-500/20' 
-                        : 'text-gray-600 hover:text-gray-800 hover:bg-pink-100'
-                    }`}
-                  >
-                    <Youtube className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform relative z-10" />
-                    <span className="relative z-10">
-                      {showYouTubePlayer ? 'Close Player' : 'Watch Together'}
-                    </span>
-                  </Button>
-                </motion.div>
-                
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleLeaveRoom}
-                    className={`group relative overflow-hidden ${
-                      isDark 
-                        ? 'text-white border-white/30 hover:bg-red-500/20 hover:border-red-400/50' 
-                        : 'text-gray-700 border-pink-300/50 hover:bg-pink-50 hover:border-pink-400/50'
-                    }`}
-                  >
-                    <LogOut className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform relative z-10" />
-                    <span className="relative z-10">Leave</span>
-                  </Button>
-                </motion.div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Pinned Messages */}
-          {showPinnedMessages && (
-            <PinnedMessages
-              pinnedMessages={pinnedMessages}
-              onUnpin={handlePin}
-              onClose={() => setShowPinnedMessages(false)}
-            />
-          )}
-
-          {/* Reply Preview */}
-          {replyingTo && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`p-3 border-b ${
-                isDark 
-                  ? 'bg-purple-500/20 border-purple-400/30' 
-                  : 'bg-pink-100/90 border-pink-200/50'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-1 h-8 bg-pink-500 rounded-full" />
-                  <div>
-                    <p className="text-xs text-pink-600 font-medium">Replying to:</p>
-                    <p className={`text-sm truncate max-w-xs ${
-                      isDark ? 'text-white' : 'text-gray-800'
-                    }`}>
-                      {messages.find(m => m.id === replyingTo)?.content}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setReplyingTo(null)}
-                  className="text-pink-500 hover:bg-pink-100"
-                >
-                  <X className="w-4 h-4" />
+                <Button variant="outline" size="sm" onClick={handleLeaveRoom}>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Leave
                 </Button>
               </div>
-            </motion.div>
-          )}
+            </div>
+          </div>
 
-          {/* Messages Area with Full Scrollback Support */}
+          {/* Messages */}
           <div 
             ref={messagesContainerRef}
-            className="flex-1 overflow-y-auto p-4 space-y-4 relative scroll-smooth"
-            style={{ scrollBehavior: 'smooth' }}
+            className="flex-1 overflow-y-auto p-4 space-y-4"
           >
-            <div className="relative z-10">
-              {/* Scroll to top button */}
-              <AnimatePresence>
-                {messages.length > 10 && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    className="sticky top-4 left-4 z-20 mb-4"
-                  >
-                    <Button
-                      onClick={scrollToTop}
-                      className="rounded-full w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 shadow-lg"
-                      size="sm"
-                    >
-                      <ArrowUp className="w-5 h-5" />
-                    </Button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <AnimatePresence>
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    onContextMenu={(e) => handleMessageLongPress(message.id, e)}
-                    onTouchStart={(e) => {
-                      const touch = e.touches[0]
-                      setTimeout(() => {
-                        handleMessageLongPress(message.id, {
-                          clientX: touch.clientX,
-                          clientY: touch.clientY,
-                          preventDefault: () => {}
-                        } as any)
-                      }, 500)
-                    }}
-                  >
-                    <MessageBubble
-                      message={message}
-                      isOwnMessage={message.senderId === user?.id}
-                      onImageClick={handleImageClick}
-                      supportMarkdown={true}
-                    />
-                  </div>
-                ))}
-              </AnimatePresence>
-              
-              {/* Typing Indicator */}
-              <AnimatePresence>
-                {isTyping && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 20 }}
-                    className="flex justify-start mb-4"
-                  >
-                    <div className={`px-4 py-2 rounded-2xl ${
-                      isDark 
-                        ? 'bg-white/10 backdrop-blur-md text-white border border-white/20' 
-                        : 'bg-white/90 backdrop-blur-md text-gray-800 border border-pink-200/50'
-                    }`}>
-                      <div className="flex space-x-1">
-                        {[0, 1, 2].map((i) => (
-                          <motion.div
-                            key={i}
-                            className="w-2 h-2 bg-pink-400 rounded-full"
-                            animate={{
-                              scale: [1, 1.5, 1],
-                              opacity: [0.5, 1, 0.5]
-                            }}
-                            transition={{
-                              duration: 1.5,
-                              repeat: Infinity,
-                              delay: i * 0.2
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Scroll to bottom button */}
             <AnimatePresence>
-              {showScrollButton && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  className="fixed bottom-24 right-6 z-20"
-                >
-                  <Button
-                    onClick={scrollToBottom}
-                    className="rounded-full w-12 h-12 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 shadow-lg"
-                    size="sm"
-                  >
-                    <ArrowDown className="w-5 h-5" />
-                  </Button>
-                </motion.div>
-              )}
+              {messages.map((message) => (
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  isOwnMessage={message.senderId === user?.id}
+                  onImageClick={handleImageClick}
+                  supportMarkdown={true}
+                />
+              ))}
             </AnimatePresence>
+            <div ref={messagesEndRef} />
           </div>
 
           {/* Emoji Picker */}
           <AnimatePresence>
             {showEmojiPicker && (
-              <motion.div
-                initial={{ opacity: 0, y: 20, scale: 0.8 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 20, scale: 0.8 }}
-                transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 30 }}
-                className="absolute bottom-20 right-4 z-50"
-              >
+              <div className="absolute bottom-20 right-4 z-50">
                 <EmojiPicker onEmojiSelect={handleEmojiSelect} />
-              </motion.div>
+              </div>
             )}
           </AnimatePresence>
 
           {/* Recording Indicator */}
           {isRecording && (
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`p-4 backdrop-blur-md border-t flex-shrink-0 ${
-                isDark 
-                  ? 'bg-pink-500/20 border-pink-400/30' 
-                  : 'bg-pink-100/90 border-pink-200/50'
-              }`}
-            >
+            <div className={`p-4 backdrop-blur-md border-t ${
+              isDark ? 'bg-pink-500/20 border-pink-400/30' : 'bg-pink-100/90 border-pink-200/50'
+            }`}>
               <div className="flex items-center justify-center space-x-4">
                 <div className="flex items-center space-x-3">
-                  <motion.div
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ duration: 1, repeat: Infinity }}
-                    className="w-4 h-4 bg-pink-500 rounded-full"
-                  />
+                  <div className="w-4 h-4 bg-pink-500 rounded-full animate-pulse" />
                   <Mic className="w-6 h-6 text-pink-500" />
-                  <span className="text-pink-600 font-bold text-lg">Recording: {formatTime(recordingTime)}</span>
+                  <span className="text-pink-600 font-bold text-lg">Recording...</span>
                 </div>
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={toggleRecording}
-                    className="text-pink-500 hover:bg-pink-100 border border-pink-300"
-                  >
-                    <MicOff className="w-4 h-4 mr-2" />
-                    Stop & Send
-                  </Button>
-                </motion.div>
+                <Button variant="ghost" size="sm" onClick={toggleRecording}>
+                  <MicOff className="w-4 h-4 mr-2" />
+                  Stop & Send
+                </Button>
               </div>
-            </motion.div>
+            </div>
           )}
 
-          {/* Enhanced Input Area */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`p-4 backdrop-blur-md border-t flex-shrink-0 ${
-              isDark 
-                ? 'bg-black/20 border-white/10' 
-                : 'bg-white/80 border-pink-200/50'
-            }`}
-          >
+          {/* Input Area */}
+          <div className={`p-4 backdrop-blur-md border-t ${
+            isDark ? 'bg-black/20 border-white/10' : 'bg-white/80 border-pink-200/50'
+          }`}>
             <form onSubmit={handleSubmit} className="flex items-center space-x-3">
               <div className="flex space-x-2">
-                {[
-                  { 
-                    icon: Paperclip, 
-                    onClick: () => fileInputRef.current?.click(), 
-                    color: 'text-pink-500 hover:bg-pink-100',
-                    tooltip: 'Attach file'
-                  },
-                  { 
-                    icon: Image, 
-                    onClick: () => fileInputRef.current?.click(), 
-                    color: 'text-rose-500 hover:bg-rose-100',
-                    tooltip: 'Send image'
-                  },
-                  { 
-                    icon: Smile, 
-                    onClick: () => setShowEmojiPicker(!showEmojiPicker), 
-                    color: 'text-purple-500 hover:bg-purple-100',
-                    tooltip: 'Add emoji'
-                  },
-                  { 
-                    icon: isRecording ? MicOff : Mic, 
-                    onClick: toggleRecording, 
-                    color: isRecording ? 'text-pink-500 bg-pink-100' : 'text-pink-500 hover:bg-pink-100',
-                    tooltip: isRecording ? 'Stop recording' : 'Record audio'
-                  }
-                ].map((button, index) => (
-                  <motion.div
-                    key={index}
-                    whileHover={{ scale: 1.1, y: -2 }}
-                    whileTap={{ scale: 0.9 }}
-                  >
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={button.onClick}
-                      className={`${button.color} hover:text-white group relative overflow-hidden rounded-full w-10 h-10 p-0`}
-                      disabled={isRecording && button.icon !== MicOff}
-                      title={button.tooltip}
-                    >
-                      <button.icon className="w-5 h-5 relative z-10" />
-                    </Button>
-                  </motion.div>
-                ))}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-pink-500 hover:bg-pink-100"
+                >
+                  <Paperclip className="w-5 h-5" />
+                </Button>
+                
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  className="text-purple-500 hover:bg-purple-100"
+                >
+                  <Smile className="w-5 h-5" />
+                </Button>
+                
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleRecording}
+                  className={isRecording ? 'text-pink-500 bg-pink-100' : 'text-pink-500 hover:bg-pink-100'}
+                >
+                  {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                </Button>
               </div>
               
               <Input
-                placeholder={isRecording ? 'Recording audio...' : replyingTo ? 'Reply to message...' : 'Type your message... (Markdown supported)'}
+                placeholder={isRecording ? 'Recording audio...' : 'Type your message...'}
                 value={newMessage}
-                onChange={(e) => {
-                  setNewMessage(e.target.value)
-                  handleTyping()
-                }}
+                onChange={(e) => setNewMessage(e.target.value)}
                 disabled={isRecording}
-                className={`flex-1 focus:ring-2 focus:ring-pink-400 transition-all duration-300 rounded-full ${
-                  isDark 
-                    ? 'bg-white/10 border-white/30 text-white placeholder-white/50' 
-                    : 'bg-white/70 border-pink-300/50 text-gray-800 placeholder-gray-500'
-                }`}
+                className="flex-1"
               />
               
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button 
-                  type="submit" 
-                  disabled={!newMessage.trim() || isRecording}
-                  className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 group relative overflow-hidden rounded-full w-12 h-12 p-0"
-                >
-                  <Send className="w-5 h-5 group-hover:scale-110 transition-transform relative z-10" />
-                </Button>
-              </motion.div>
+              <Button 
+                type="submit" 
+                disabled={!newMessage.trim() || isRecording}
+                className="bg-gradient-to-r from-pink-500 to-rose-500"
+              >
+                <Send className="w-5 h-5" />
+              </Button>
             </form>
-            
-            {/* Markdown help text */}
-            <div className={`mt-2 text-xs ${
-              isDark ? 'text-white/50' : 'text-gray-500'
-            }`}>
-              <span>Supports **bold**, *italic*, `code`, and [links](url) • Long press messages for actions</span>
-            </div>
-          </motion.div>
+          </div>
         </div>
       </div>
 
-      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"
@@ -820,14 +379,6 @@ export const ChatRoomPage: React.FC = () => {
         onChange={handleFileUpload}
         className="hidden"
       />
-
-      {/* Click outside to close actions */}
-      {showMessageActions && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setShowMessageActions(null)}
-        />
-      )}
     </div>
   )
 }
