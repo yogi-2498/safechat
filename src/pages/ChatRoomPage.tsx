@@ -247,11 +247,19 @@ export const ChatRoomPage: React.FC = () => {
   // Handle pin message
   const handlePin = async (messageId: string) => {
     try {
-      await (supabase as any).pinMessage(roomCode, messageId)
+      const isAlreadyPinned = pinnedMessages.some(p => p.id === messageId)
+      
+      if (isAlreadyPinned) {
+        await (supabase as any).unpinMessage(roomCode, messageId)
+        toast.success('Message unpinned!')
+      } else {
+        await (supabase as any).pinMessage(roomCode, messageId)
+        toast.success('Message pinned!')
+      }
+      
       await loadPinnedMessages()
-      toast.success('Message pinned!')
     } catch (error) {
-      toast.error('Failed to pin message')
+      toast.error('Failed to update pin status')
     }
   }
 

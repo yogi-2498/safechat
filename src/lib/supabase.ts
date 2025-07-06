@@ -17,6 +17,19 @@ class SimpleRoomSystem {
       timestamp: string
       fileUrl?: string
       fileName?: string
+      pinned_at?: string
+      reactions?: Record<string, Array<{ userId: string; emoji: string }>>
+    }>
+    pinnedMessages: Array<{
+      id: string
+      content: string
+      senderId: string
+      senderName: string
+      type: 'text' | 'image' | 'audio' | 'file'
+      timestamp: string
+      pinned_at: string
+      fileUrl?: string
+      fileName?: string
     }>
     createdAt: string
     lastActivity: string
@@ -52,6 +65,7 @@ class SimpleRoomSystem {
       id: roomCode,
       users: [{ id: userId, name: userName, joinedAt: new Date().toISOString() }],
       messages: [],
+      pinnedMessages: [],
       createdAt: new Date().toISOString(),
       lastActivity: new Date().toISOString()
     }
@@ -115,7 +129,8 @@ class SimpleRoomSystem {
     const newMessage = {
       ...message,
       id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      reactions: {}
     }
 
     room.messages.push(newMessage)
@@ -131,6 +146,98 @@ class SimpleRoomSystem {
   getMessages(roomCode: string) {
     const room = this.rooms.get(roomCode.toUpperCase())
     return room ? room.messages : []
+  }
+
+  // Get pinned messages for room
+  getPinnedMessages(roomCode: string) {
+    const room = this.rooms.get(roomCode.toUpperCase())
+    return room ? room.pinnedMessages : []
+  }
+
+  // Pin a message
+  pinMessage(roomCode: string, messageId: string) {
+    const room = this.rooms.get(roomCode.toUpperCase())
+    if (!room) return { success: false, error: 'Room not found' }
+
+    const message = room.messages.find(m => m.id === messageId)
+    if (!message) return { success: false, error: 'Message not found' }
+
+    // Check if already pinned
+    const alreadyPinned = room.pinnedMessages.find(p => p.id === messageId)
+    if (alreadyPinned) return { success: false, error: 'Message already pinned' }
+
+    // Add to pinned messages
+    const pinnedMessage = {
+      ...message,
+      pinned_at: new Date().toISOString()
+    }
+    room.pinnedMessages.push(pinnedMessage)
+
+    // Update the original message
+    message.pinned_at = new Date().toISOString()
+
+    console.log(`📌 Message pinned in ${roomCode}:`, messageId)
+    this.notifyRoomUpdate(roomCode.toUpperCase(), 'message_pinned', { messageId, pinnedMessage })
+    
+    return { success: true, data: pinnedMessage }
+  }
+
+  // Unpin a message
+  unpinMessage(roomCode: string, messageId: string) {
+    const room = this.rooms.get(roomCode.toUpperCase())
+    if (!room) return { success: false, error: 'Room not found' }
+
+    // Remove from pinned messages
+    const pinnedIndex = room.pinnedMessages.findIndex(p => p.id === messageId)
+    if (pinnedIndex === -1) return { success: false, error: 'Message not pinned' }
+
+    room.pinnedMessages.splice(pinnedIndex, 1)
+
+    // Update the original message
+    const message = room.messages.find(m => m.id === messageId)
+    if (message) {
+      delete message.pinned_at
+    }
+
+    console.log(`📌 Message unpinned in ${roomCode}:`, messageId)
+    this.notifyRoomUpdate(roomCode.toUpperCase(), 'message_unpinned', { messageId })
+    
+    return { success: true }
+  }
+
+  // Add reaction to message
+  addReaction(roomCode: string, messageId: string, emoji: string, userId: string) {
+    const room = this.rooms.get(roomCode.toUpperCase())
+    if (!room) return { success: false, error: 'Room not found' }
+
+    const message = room.messages.find(m => m.id === messageId)
+    if (!message) return { success: false, error: 'Message not found' }
+
+    if (!message.reactions) {
+      message.reactions = {}
+    }
+
+    if (!message.reactions[emoji]) {
+      message.reactions[emoji] = []
+    }
+
+    // Check if user already reacted with this emoji
+    const existingReaction = message.reactions[emoji].find(r => r.userId === userId)
+    if (existingReaction) {
+      // Remove reaction
+      message.reactions[emoji] = message.reactions[emoji].filter(r => r.userId !== userId)
+      if (message.reactions[emoji].length === 0) {
+        delete message.reactions[emoji]
+      }
+    } else {
+      // Add reaction
+      message.reactions[emoji].push({ userId, emoji })
+    }
+
+    console.log(`😊 Reaction ${existingReaction ? 'removed' : 'added'} in ${roomCode}:`, { messageId, emoji, userId })
+    this.notifyRoomUpdate(roomCode.toUpperCase(), 'reaction_updated', { messageId, emoji, userId, reactions: message.reactions })
+    
+    return { success: true, data: message.reactions }
   }
 
   // Subscribe to room updates
@@ -296,6 +403,35 @@ export const supabase = {
   getRoomMessages: (roomCode: string) => {
     const messages = roomSystem.getMessages(roomCode)
     return { data: messages, error: null }
+  },
+
+  getPinnedMessages: (roomCode: string) => {
+    const pinnedMessages = roomSystem.getPinnedMessages(roomCode)
+    return { data: pinnedMessages, error: null }
+  },
+
+  pinMessage: (roomCode: string, messageId: string) => {
+    const result = roomSystem.pinMessage(roomCode, messageId)
+    return {
+      data: result.success ? result.data : null,
+      error: result.success ? null : new Error(result.error || 'Failed to pin message')
+    }
+  },
+
+  unpinMessage: (roomCode: string, messageId: string) => {
+    const result = roomSystem.unpinMessage(roomCode, messageId)
+    return {
+      data: result.success ? { success: true } : null,
+      error: result.success ? null : new Error(result.error || 'Failed to unpin message')
+    }
+  },
+
+  addReaction: (roomCode: string, messageId: string, emoji: string, userId: string) => {
+    const result = roomSystem.addReaction(roomCode, messageId, emoji, userId)
+    return {
+      data: result.success ? result.data : null,
+      error: result.success ? null : new Error(result.error || 'Failed to add reaction')
+    }
   },
 
   subscribeToRoom: (roomCode: string, callback: (data: any) => void) => {

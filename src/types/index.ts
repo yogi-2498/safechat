@@ -15,6 +15,8 @@ export interface Message {
   timestamp: string;
   fileUrl?: string;
   fileName?: string;
+  pinned_at?: string;
+  reactions?: Record<string, Array<{ userId: string; emoji: string }>>;
 }
 
 export interface MessageInput {

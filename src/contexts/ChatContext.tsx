@@ -55,7 +55,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         if (joinResult.error) {
           console.error('❌ Failed to join room:', joinResult.error)
           toast.error(joinResult.error.message)
-          return
+          return null
         }
 
         // Load existing messages
@@ -86,22 +86,30 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         setIsConnected(true)
         toast.success(`💕 Connected to room ${roomCode}`)
 
-        return () => {
-          unsubscribe()
-          (supabase as any).leaveRoom(roomCode, user.id)
-        }
+        // Return the unsubscribe function
+        return unsubscribe
       } catch (error) {
         console.error('❌ Error initializing room:', error)
         toast.error('Failed to connect to room')
+        return null
       } finally {
         setIsLoading(false)
       }
     }
 
-    const cleanup = initializeRoom()
+    let unsubscribeFunction: (() => void) | null = null
+
+    initializeRoom().then((unsubscribe) => {
+      unsubscribeFunction = unsubscribe
+    })
 
     return () => {
-      cleanup?.then(cleanupFn => cleanupFn?.())
+      if (unsubscribeFunction) {
+        unsubscribeFunction()
+      }
+      if (user?.id && roomCode) {
+        (supabase as any).leaveRoom(roomCode, user.id)
+      }
     }
   }, [user, roomCode])
 
