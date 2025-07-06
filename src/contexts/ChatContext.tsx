@@ -2,7 +2,6 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { useParams } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 import { Message, MessageInput } from '../types'
-import { EncryptionService } from '../services/EncryptionService'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
@@ -12,6 +11,7 @@ interface ChatContextType {
   isConnected: boolean
   connectedUsers: number
   isLoading: boolean
+  roomUsers: Array<{ id: string; name: string }>
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined)
@@ -34,6 +34,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const [messages, setMessages] = useState<Message[]>([])
   const [isConnected, setIsConnected] = useState(false)
   const [connectedUsers, setConnectedUsers] = useState(1)
+  const [roomUsers, setRoomUsers] = useState<Array<{ id: string; name: string }>>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -42,37 +43,65 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     const initializeRoom = async () => {
       try {
         setIsLoading(true)
+        console.log(`🚀 Initializing chat for room: ${roomCode}`)
         
-        // Initialize encryption for the room
-        await EncryptionService.initializeRoom(roomCode)
+        // Join the room
+        const joinResult = await (supabase as any).joinRoom(
+          roomCode, 
+          user.id, 
+          user.name || user.email?.split('@')[0] || 'User'
+        )
         
-        // Load existing messages from the room
+        if (joinResult.error) {
+          console.error('❌ Failed to join room:', joinResult.error)
+          toast.error(joinResult.error.message)
+          return
+        }
+
+        // Load existing messages
         const { data: existingMessages } = await (supabase as any).getRoomMessages(roomCode)
         if (existingMessages) {
-          const decryptedMessages = await Promise.all(
-            existingMessages.map(async (msg: any) => ({
-              ...msg,
-              content: msg.encryptedContent ? await EncryptionService.decryptMessage(msg.encryptedContent) : msg.content
-            }))
-          )
-          setMessages(decryptedMessages)
+          console.log(`📚 Loaded ${existingMessages.length} existing messages`)
+          setMessages(existingMessages)
         }
-        
+
+        // Subscribe to real-time updates
+        const unsubscribe = (supabase as any).subscribeToRoom(roomCode, (update: any) => {
+          console.log('📡 Room update received:', update)
+          
+          if (update.type === 'new_message') {
+            setMessages(prev => {
+              // Avoid duplicates
+              if (prev.find(m => m.id === update.data.id)) {
+                return prev
+              }
+              return [...prev, update.data]
+            })
+          } else if (update.type === 'user_joined' || update.type === 'user_left') {
+            setRoomUsers(update.data.users || [])
+            setConnectedUsers(update.data.users?.length || 1)
+          }
+        })
+
         setIsConnected(true)
-        setConnectedUsers(Math.floor(Math.random() * 2) + 1)
         toast.success(`💕 Connected to room ${roomCode}`)
+
+        return () => {
+          unsubscribe()
+          (supabase as any).leaveRoom(roomCode, user.id)
+        }
       } catch (error) {
-        console.error('Error initializing room:', error)
+        console.error('❌ Error initializing room:', error)
         toast.error('Failed to connect to room')
       } finally {
         setIsLoading(false)
       }
     }
 
-    initializeRoom()
+    const cleanup = initializeRoom()
 
     return () => {
-      EncryptionService.cleanup()
+      cleanup?.then(cleanupFn => cleanupFn?.())
     }
   }, [user, roomCode])
 
@@ -80,31 +109,25 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     if (!user || !roomCode) return
 
     try {
-      // Encrypt message content
-      const encryptedContent = await EncryptionService.encryptMessage(messageInput.content)
+      console.log('📤 Sending message:', messageInput)
       
       const messageData = {
         content: messageInput.content,
-        encryptedContent,
         senderId: user.id,
-        senderName: user.name || user.email,
+        senderName: user.name || user.email?.split('@')[0] || 'User',
         type: messageInput.type,
         fileUrl: messageInput.fileUrl,
         fileName: messageInput.fileName,
       }
 
-      // Add to database
       const { data: newMessage } = await (supabase as any).addMessage(roomCode, messageData)
       
       if (newMessage) {
-        const message: Message = {
-          ...newMessage,
-          timestamp: newMessage.created_at
-        }
-        setMessages(prev => [...prev, message])
+        console.log('✅ Message sent successfully:', newMessage)
+        // Message will be added via real-time subscription
       }
     } catch (error) {
-      console.error('Error sending message:', error)
+      console.error('❌ Error sending message:', error)
       toast.error('Failed to send message')
     }
   }
@@ -114,6 +137,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     sendMessage,
     isConnected,
     connectedUsers,
+    roomUsers,
     isLoading,
   }
 

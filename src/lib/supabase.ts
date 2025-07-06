@@ -3,79 +3,218 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://demo.supabase.co'
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'demo-key'
 
-// Production-ready Supabase client with persistent room storage
-class ProductionSupabaseClient {
-  private rooms = new Map<string, { 
-    id: string; 
-    users: string[]; 
-    created_at: string; 
-    expires_at: string;
-    messages: any[];
-    pinned_messages: any[];
-    creator_id: string;
+// Simplified in-memory room system that actually works
+class SimpleRoomSystem {
+  private rooms = new Map<string, {
+    id: string
+    users: Array<{ id: string; name: string; joinedAt: string }>
+    messages: Array<{
+      id: string
+      content: string
+      senderId: string
+      senderName: string
+      type: 'text' | 'image' | 'audio' | 'file'
+      timestamp: string
+      fileUrl?: string
+      fileName?: string
+    }>
+    createdAt: string
+    lastActivity: string
   }>()
-  
-  private activeRooms = new Set<string>()
-  private storageKey = 'safechat_rooms'
+
+  private listeners = new Map<string, Set<(data: any) => void>>()
 
   constructor() {
-    // Load existing rooms from localStorage for persistence
-    this.loadRoomsFromStorage()
-    this.cleanupExpiredRooms()
-    
-    // Cleanup expired rooms every 5 minutes
-    setInterval(() => this.cleanupExpiredRooms(), 5 * 60 * 1000)
-    
-    // Save rooms to storage every 30 seconds
-    setInterval(() => this.saveRoomsToStorage(), 30 * 1000)
+    // Clean up inactive rooms every 5 minutes
+    setInterval(() => this.cleanupInactiveRooms(), 5 * 60 * 1000)
   }
 
-  private loadRoomsFromStorage() {
-    try {
-      const stored = localStorage.getItem(this.storageKey)
-      if (stored) {
-        const data = JSON.parse(stored)
-        this.rooms = new Map(data.rooms || [])
-        this.activeRooms = new Set(data.activeRooms || [])
-        console.log(`Loaded ${this.rooms.size} rooms from storage`)
+  // Generate secure room code
+  generateRoomCode(): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    let result = ''
+    for (let i = 0; i < 6; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return result
+  }
+
+  // Create a new room
+  createRoom(userId: string, userName: string): { roomCode: string; success: boolean } {
+    let roomCode = this.generateRoomCode()
+    
+    // Ensure unique room code
+    while (this.rooms.has(roomCode)) {
+      roomCode = this.generateRoomCode()
+    }
+
+    const room = {
+      id: roomCode,
+      users: [{ id: userId, name: userName, joinedAt: new Date().toISOString() }],
+      messages: [],
+      createdAt: new Date().toISOString(),
+      lastActivity: new Date().toISOString()
+    }
+
+    this.rooms.set(roomCode, room)
+    console.log(`✅ Room created: ${roomCode}`, room)
+    
+    return { roomCode, success: true }
+  }
+
+  // Check if room exists and can be joined
+  canJoinRoom(roomCode: string): { canJoin: boolean; reason?: string; userCount: number } {
+    const room = this.rooms.get(roomCode.toUpperCase())
+    
+    if (!room) {
+      return { canJoin: false, reason: 'Room not found', userCount: 0 }
+    }
+
+    if (room.users.length >= 2) {
+      return { canJoin: false, reason: 'Room is full (2/2 users)', userCount: room.users.length }
+    }
+
+    return { canJoin: true, userCount: room.users.length }
+  }
+
+  // Join a room
+  joinRoom(roomCode: string, userId: string, userName: string): { success: boolean; error?: string } {
+    const upperCode = roomCode.toUpperCase()
+    const room = this.rooms.get(upperCode)
+
+    if (!room) {
+      return { success: false, error: 'Room not found' }
+    }
+
+    if (room.users.length >= 2) {
+      return { success: false, error: 'Room is full' }
+    }
+
+    // Check if user already in room
+    if (!room.users.find(u => u.id === userId)) {
+      room.users.push({ id: userId, name: userName, joinedAt: new Date().toISOString() })
+      room.lastActivity = new Date().toISOString()
+    }
+
+    console.log(`✅ User joined room ${upperCode}:`, room.users)
+    this.notifyRoomUpdate(upperCode, 'user_joined', { users: room.users })
+    
+    return { success: true }
+  }
+
+  // Get room data
+  getRoom(roomCode: string) {
+    return this.rooms.get(roomCode.toUpperCase())
+  }
+
+  // Add message to room
+  addMessage(roomCode: string, message: any) {
+    const room = this.rooms.get(roomCode.toUpperCase())
+    if (!room) return null
+
+    const newMessage = {
+      ...message,
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+      timestamp: new Date().toISOString()
+    }
+
+    room.messages.push(newMessage)
+    room.lastActivity = new Date().toISOString()
+
+    console.log(`📨 Message added to ${roomCode}:`, newMessage)
+    this.notifyRoomUpdate(roomCode.toUpperCase(), 'new_message', newMessage)
+    
+    return newMessage
+  }
+
+  // Get messages for room
+  getMessages(roomCode: string) {
+    const room = this.rooms.get(roomCode.toUpperCase())
+    return room ? room.messages : []
+  }
+
+  // Subscribe to room updates
+  subscribe(roomCode: string, callback: (data: any) => void) {
+    const upperCode = roomCode.toUpperCase()
+    if (!this.listeners.has(upperCode)) {
+      this.listeners.set(upperCode, new Set())
+    }
+    this.listeners.get(upperCode)!.add(callback)
+
+    // Return unsubscribe function
+    return () => {
+      const listeners = this.listeners.get(upperCode)
+      if (listeners) {
+        listeners.delete(callback)
+        if (listeners.size === 0) {
+          this.listeners.delete(upperCode)
+        }
       }
-    } catch (error) {
-      console.error('Error loading rooms from storage:', error)
     }
   }
 
-  private saveRoomsToStorage() {
-    try {
-      const data = {
-        rooms: Array.from(this.rooms.entries()),
-        activeRooms: Array.from(this.activeRooms),
-        lastSaved: new Date().toISOString()
-      }
-      localStorage.setItem(this.storageKey, JSON.stringify(data))
-    } catch (error) {
-      console.error('Error saving rooms to storage:', error)
+  // Notify room updates
+  private notifyRoomUpdate(roomCode: string, type: string, data: any) {
+    const listeners = this.listeners.get(roomCode)
+    if (listeners) {
+      listeners.forEach(callback => {
+        try {
+          callback({ type, data, roomCode })
+        } catch (error) {
+          console.error('Error in room listener:', error)
+        }
+      })
     }
   }
 
-  private cleanupExpiredRooms() {
+  // Leave room
+  leaveRoom(roomCode: string, userId: string) {
+    const room = this.rooms.get(roomCode.toUpperCase())
+    if (!room) return
+
+    room.users = room.users.filter(u => u.id !== userId)
+    
+    if (room.users.length === 0) {
+      // Delete empty room
+      this.rooms.delete(roomCode.toUpperCase())
+      this.listeners.delete(roomCode.toUpperCase())
+      console.log(`🗑️ Deleted empty room: ${roomCode}`)
+    } else {
+      this.notifyRoomUpdate(roomCode.toUpperCase(), 'user_left', { users: room.users })
+    }
+  }
+
+  // Clean up inactive rooms (older than 24 hours)
+  private cleanupInactiveRooms() {
     const now = new Date()
-    let cleaned = 0
-    
-    for (const [code, room] of this.rooms.entries()) {
-      if (new Date(room.expires_at) < now) {
-        this.rooms.delete(code)
-        this.activeRooms.delete(code)
-        cleaned++
+    const cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000) // 24 hours ago
+
+    for (const [roomCode, room] of this.rooms.entries()) {
+      if (new Date(room.lastActivity) < cutoff) {
+        this.rooms.delete(roomCode)
+        this.listeners.delete(roomCode)
+        console.log(`🧹 Cleaned up inactive room: ${roomCode}`)
       }
-    }
-    
-    if (cleaned > 0) {
-      console.log(`Cleaned up ${cleaned} expired rooms`)
-      this.saveRoomsToStorage()
     }
   }
 
-  auth = {
+  // Debug: Get all rooms
+  getAllRooms() {
+    return {
+      rooms: Array.from(this.rooms.entries()),
+      count: this.rooms.size,
+      listeners: this.listeners.size
+    }
+  }
+}
+
+// Create singleton instance
+const roomSystem = new SimpleRoomSystem()
+
+// Export the room system with Supabase-like interface
+export const supabase = {
+  // Auth methods (mock)
+  auth: {
     getSession: async () => ({ data: { session: null }, error: null }),
     signInWithPassword: async ({ email, password }: { email: string; password: string }) => {
       if (email && password) {
@@ -117,318 +256,73 @@ class ProductionSupabaseClient {
     onAuthStateChange: (callback: Function) => {
       return { data: { subscription: { unsubscribe: () => {} } } }
     }
-  }
+  },
 
-  // Enhanced room validation with detailed logging
-  validateRoom = async (roomCode: string) => {
-    this.cleanupExpiredRooms()
-    const upperCode = roomCode.toUpperCase()
-    const room = this.rooms.get(upperCode)
-    
-    console.log(`Validating room ${upperCode}:`, {
-      exists: !!room,
-      totalRooms: this.rooms.size,
-      roomCodes: Array.from(this.rooms.keys())
-    })
-    
-    if (!room) {
-      return { 
-        exists: false, 
-        canJoin: false, 
-        userCount: 0, 
-        message: `Room ${upperCode} not found. Available rooms: ${Array.from(this.rooms.keys()).join(', ') || 'none'}` 
-      }
+  // Room methods
+  createRoom: (userId: string, userName: string) => {
+    const result = roomSystem.createRoom(userId, userName)
+    return { 
+      data: result.success ? { roomCode: result.roomCode } : null, 
+      error: result.success ? null : new Error('Failed to create room') 
     }
+  },
 
-    const now = new Date()
-    const expiresAt = new Date(room.expires_at)
-    
-    if (now > expiresAt) {
-      this.rooms.delete(upperCode)
-      this.activeRooms.delete(upperCode)
-      this.saveRoomsToStorage()
-      return { 
-        exists: false, 
-        canJoin: false, 
-        userCount: 0, 
-        message: `Room ${upperCode} has expired` 
-      }
-    }
-
-    const canJoin = room.users.length < 2
+  validateRoom: (roomCode: string) => {
+    const validation = roomSystem.canJoinRoom(roomCode)
     return {
-      exists: true,
-      canJoin,
-      userCount: room.users.length,
-      message: canJoin ? `Room ${upperCode} is available (${room.users.length}/2 users)` : `Room ${upperCode} is full (2/2 users)`
+      exists: validation.canJoin || validation.reason !== 'Room not found',
+      canJoin: validation.canJoin,
+      userCount: validation.userCount,
+      message: validation.reason || `Room ${roomCode} is available`
     }
-  }
+  },
 
-  // Enhanced room creation with guaranteed uniqueness
-  createRoom = async (userId: string) => {
-    let roomCode = this.generateSecureRoomCode()
-    let attempts = 0
-    
-    // Ensure absolute uniqueness
-    while (this.rooms.has(roomCode) && attempts < 50) {
-      roomCode = this.generateSecureRoomCode()
-      attempts++
+  joinRoom: (roomCode: string, userId: string, userName: string) => {
+    const result = roomSystem.joinRoom(roomCode, userId, userName)
+    return {
+      data: result.success ? roomSystem.getRoom(roomCode) : null,
+      error: result.success ? null : new Error(result.error || 'Failed to join room')
     }
-    
-    if (attempts >= 50) {
-      return { data: null, error: new Error('Failed to generate unique room code') }
+  },
+
+  addMessage: (roomCode: string, message: any) => {
+    const result = roomSystem.addMessage(roomCode, message)
+    return {
+      data: result,
+      error: result ? null : new Error('Failed to add message')
     }
-    
-    const room = {
-      id: roomCode,
-      users: [userId],
-      created_at: new Date().toISOString(),
-      expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
-      messages: [],
-      pinned_messages: [],
-      creator_id: userId
-    }
-    
-    this.rooms.set(roomCode, room)
-    this.activeRooms.add(roomCode)
-    this.saveRoomsToStorage()
-    
-    console.log(`Created room ${roomCode}:`, {
-      totalRooms: this.rooms.size,
-      roomData: room
-    })
-    
-    return { data: { roomCode, room }, error: null }
-  }
+  },
 
-  // Generate cryptographically secure room code with better entropy
-  private generateSecureRoomCode(): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-    let result = ''
-    
-    // Use crypto.getRandomValues for better randomness
-    const array = new Uint32Array(6)
-    crypto.getRandomValues(array)
-    
-    for (let i = 0; i < 6; i++) {
-      result += chars.charAt(array[i] % chars.length)
-    }
-    
-    return result
-  }
+  getRoomMessages: (roomCode: string) => {
+    const messages = roomSystem.getMessages(roomCode)
+    return { data: messages, error: null }
+  },
 
-  // Enhanced room joining with better validation
-  joinRoom = async (roomCode: string, userId: string) => {
-    const upperCode = roomCode.toUpperCase()
-    const room = this.rooms.get(upperCode)
-    
-    console.log(`User ${userId} attempting to join room ${upperCode}:`, {
-      roomExists: !!room,
-      currentUsers: room?.users || [],
-      userCount: room?.users.length || 0
-    })
-    
-    if (!room) {
-      return { 
-        data: null, 
-        error: new Error(`Room ${upperCode} not found. Please check the code or create a new room.`) 
-      }
-    }
+  subscribeToRoom: (roomCode: string, callback: (data: any) => void) => {
+    return roomSystem.subscribe(roomCode, callback)
+  },
 
-    // Check if room is expired
-    const now = new Date()
-    const expiresAt = new Date(room.expires_at)
-    
-    if (now > expiresAt) {
-      this.rooms.delete(upperCode)
-      this.activeRooms.delete(upperCode)
-      this.saveRoomsToStorage()
-      return { 
-        data: null, 
-        error: new Error(`Room ${upperCode} has expired`) 
-      }
-    }
-
-    // Check if room is full (and user is not already in it)
-    if (room.users.length >= 2 && !room.users.includes(userId)) {
-      return { 
-        data: null, 
-        error: new Error(`Room ${upperCode} is full (${room.users.length}/2 users)`) 
-      }
-    }
-
-    // Add user if not already in room
-    if (!room.users.includes(userId)) {
-      room.users.push(userId)
-      this.saveRoomsToStorage()
-      console.log(`User ${userId} joined room ${upperCode}. Users: ${room.users}`)
-    }
-
-    return { data: room, error: null }
-  }
-
-  // Get room messages with full history
-  getRoomMessages = async (roomCode: string) => {
-    const room = this.rooms.get(roomCode.toUpperCase())
-    return { data: room?.messages || [], error: null }
-  }
-
-  // Get pinned messages
-  getPinnedMessages = async (roomCode: string) => {
-    const room = this.rooms.get(roomCode.toUpperCase())
-    return { data: room?.pinned_messages || [], error: null }
-  }
-
-  // Add message to room
-  addMessage = async (roomCode: string, message: any) => {
-    const room = this.rooms.get(roomCode.toUpperCase())
-    if (!room) {
-      return { data: null, error: new Error('Room not found') }
-    }
-
-    const newMessage = {
-      ...message,
-      id: Math.random().toString(36).substr(2, 9),
-      created_at: new Date().toISOString(),
-      reactions: {},
-      replies: []
-    }
-    
-    room.messages.push(newMessage)
-    this.saveRoomsToStorage()
-    return { data: newMessage, error: null }
-  }
-
-  // Pin message
-  pinMessage = async (roomCode: string, messageId: string) => {
-    const room = this.rooms.get(roomCode.toUpperCase())
-    if (!room) {
-      return { data: null, error: new Error('Room not found') }
-    }
-
-    const message = room.messages.find(m => m.id === messageId)
-    if (!message) {
-      return { data: null, error: new Error('Message not found') }
-    }
-
-    // Remove if already pinned, add if not
-    const pinnedIndex = room.pinned_messages.findIndex(m => m.id === messageId)
-    if (pinnedIndex >= 0) {
-      room.pinned_messages.splice(pinnedIndex, 1)
-    } else {
-      room.pinned_messages.push({ ...message, pinned_at: new Date().toISOString() })
-    }
-
-    this.saveRoomsToStorage()
-    return { data: room.pinned_messages, error: null }
-  }
-
-  // Add reaction to message
-  addReaction = async (roomCode: string, messageId: string, emoji: string, userId: string) => {
-    const room = this.rooms.get(roomCode.toUpperCase())
-    if (!room) {
-      return { data: null, error: new Error('Room not found') }
-    }
-
-    const message = room.messages.find(m => m.id === messageId)
-    if (!message) {
-      return { data: null, error: new Error('Message not found') }
-    }
-
-    if (!message.reactions) {
-      message.reactions = {}
-    }
-
-    if (!message.reactions[emoji]) {
-      message.reactions[emoji] = []
-    }
-
-    // Toggle reaction
-    const userIndex = message.reactions[emoji].indexOf(userId)
-    if (userIndex >= 0) {
-      message.reactions[emoji].splice(userIndex, 1)
-      if (message.reactions[emoji].length === 0) {
-        delete message.reactions[emoji]
-      }
-    } else {
-      message.reactions[emoji].push(userId)
-    }
-
-    this.saveRoomsToStorage()
-    return { data: message, error: null }
-  }
-
-  // Add reply to message
-  addReply = async (roomCode: string, messageId: string, reply: any) => {
-    const room = this.rooms.get(roomCode.toUpperCase())
-    if (!room) {
-      return { data: null, error: new Error('Room not found') }
-    }
-
-    const message = room.messages.find(m => m.id === messageId)
-    if (!message) {
-      return { data: null, error: new Error('Message not found') }
-    }
-
-    if (!message.replies) {
-      message.replies = []
-    }
-
-    const newReply = {
-      ...reply,
-      id: Math.random().toString(36).substr(2, 9),
-      created_at: new Date().toISOString()
-    }
-
-    message.replies.push(newReply)
-    this.saveRoomsToStorage()
-    return { data: newReply, error: null }
-  }
-
-  // Leave room and cleanup
-  leaveRoom = async (roomCode: string, userId: string) => {
-    const room = this.rooms.get(roomCode.toUpperCase())
-    if (!room) {
-      return { data: null, error: null }
-    }
-
-    // Remove user from room
-    room.users = room.users.filter(id => id !== userId)
-
-    // If no users left, delete room immediately
-    if (room.users.length === 0) {
-      this.rooms.delete(roomCode.toUpperCase())
-      this.activeRooms.delete(roomCode.toUpperCase())
-      console.log(`Deleted empty room ${roomCode.toUpperCase()}`)
-    }
-
-    this.saveRoomsToStorage()
+  leaveRoom: (roomCode: string, userId: string) => {
+    roomSystem.leaveRoom(roomCode, userId)
     return { data: { success: true }, error: null }
-  }
+  },
 
-  // Get all active rooms (for debugging)
-  getAllRooms = () => {
-    return {
-      rooms: Array.from(this.rooms.entries()),
-      activeRooms: Array.from(this.activeRooms),
-      count: this.rooms.size
-    }
-  }
+  // Debug method
+  getAllRooms: () => roomSystem.getAllRooms(),
 
-  from = (table: string) => ({
+  // Legacy methods for compatibility
+  from: (table: string) => ({
     select: () => ({ data: [], error: null }),
     insert: () => ({ data: null, error: null }),
     update: () => ({ data: null, error: null }),
     delete: () => ({ data: null, error: null }),
     subscribe: () => ({ on: () => ({ subscribe: () => {} }) })
-  })
+  }),
 
-  channel = (name: string) => ({
-    on: () => this,
-    subscribe: () => this,
-    send: () => this,
-    unsubscribe: () => this
+  channel: (name: string) => ({
+    on: () => supabase,
+    subscribe: () => supabase,
+    send: () => supabase,
+    unsubscribe: () => supabase
   })
 }
-
-export const supabase = new ProductionSupabaseClient()

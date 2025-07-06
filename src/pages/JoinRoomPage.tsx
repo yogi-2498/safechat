@@ -28,10 +28,13 @@ export const JoinRoomPage: React.FC = () => {
     setIsCreating(true)
     
     try {
-      console.log('Creating room...')
-      const result = await RoomValidationService.createRoom(user.id)
+      console.log('🏗️ Creating new room...')
+      const result = await RoomValidationService.createRoom(
+        user.id, 
+        user.name || user.email?.split('@')[0] || 'User'
+      )
       
-      console.log('Create room result:', result)
+      console.log('✅ Create room result:', result)
       
       if (!result.success) {
         toast.error(result.message)
@@ -42,18 +45,18 @@ export const JoinRoomPage: React.FC = () => {
       // Copy to clipboard
       try {
         await navigator.clipboard.writeText(result.roomCode)
-        toast.success(`💕 Room created: ${result.roomCode} (copied to clipboard)`)
+        toast.success(`🎉 Room created: ${result.roomCode} (copied to clipboard!)`)
       } catch (clipboardError) {
-        toast.success(`💕 Room created: ${result.roomCode}`)
+        toast.success(`🎉 Room created: ${result.roomCode}`)
       }
       
-      // Navigate to the room after a short delay
+      // Navigate to the room
       setTimeout(() => {
         navigate(`/room/${result.roomCode}`)
         setIsCreating(false)
       }, 1000)
     } catch (error) {
-      console.error('Error creating room:', error)
+      console.error('❌ Error creating room:', error)
       setIsCreating(false)
       toast.error('Failed to create room')
     }
@@ -98,7 +101,7 @@ export const JoinRoomPage: React.FC = () => {
     setValidationError('')
     
     try {
-      console.log('Joining room:', roomCode)
+      console.log('👥 Attempting to join room:', roomCode)
       
       // Validate room first
       const validation = await RoomValidationService.validateRoom(roomCode)
@@ -118,7 +121,11 @@ export const JoinRoomPage: React.FC = () => {
       }
 
       // Join the room
-      const joinResult = await RoomValidationService.joinRoom(roomCode, user.id)
+      const joinResult = await RoomValidationService.joinRoom(
+        roomCode, 
+        user.id, 
+        user.name || user.email?.split('@')[0] || 'User'
+      )
       
       if (!joinResult.success) {
         setValidationError(joinResult.message)
@@ -131,7 +138,7 @@ export const JoinRoomPage: React.FC = () => {
       navigate(`/room/${roomCode.toUpperCase()}`)
       
     } catch (error) {
-      console.error('Error joining room:', error)
+      console.error('❌ Error joining room:', error)
       setValidationError('Failed to join room. Please try again.')
       toast.error('Connection error. Please try again.')
     } finally {
@@ -160,10 +167,10 @@ export const JoinRoomPage: React.FC = () => {
     }
   }
 
-  // Debug function to show all rooms
+  // Debug function
   const debugShowRooms = async () => {
     const rooms = await RoomValidationService.debugGetAllRooms()
-    console.log('Debug - All rooms:', rooms)
+    console.log('🐛 Debug - All rooms:', rooms)
     toast.success(`Debug: ${rooms.count} active rooms (check console)`)
   }
 
@@ -210,7 +217,7 @@ export const JoinRoomPage: React.FC = () => {
             </Button>
           </motion.div>
           
-          {/* Debug button - remove in production */}
+          {/* Debug button */}
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <Button
               variant="ghost"
@@ -473,14 +480,14 @@ export const JoinRoomPage: React.FC = () => {
                 <h3 className={`text-xl font-bold mb-3 font-serif ${
                   isDark ? 'text-white' : 'text-gray-800'
                 }`}>
-                  🔒 Production Security Notice
+                  🔒 Real-Time Room System
                 </h3>
                 <p className={`text-sm ${
                   isDark ? 'text-white/70' : 'text-gray-600'
                 }`}>
-                  Only valid room codes that exist in our secure database can be accessed. 
-                  All rooms are created dynamically and expire after 24 hours for maximum security.
-                  Room codes are validated in real-time across all devices and browsers.
+                  Rooms are created and validated in real-time. Only valid room codes that exist 
+                  in our secure system can be accessed. All rooms support up to 2 users and 
+                  automatically clean up after 24 hours of inactivity.
                 </p>
               </div>
             </Card>

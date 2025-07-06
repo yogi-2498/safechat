@@ -1,36 +1,39 @@
 import { supabase } from '../lib/supabase'
 
-// Production room validation service with enhanced error handling
 export class RoomValidationService {
   // Validate room code format
   static validateFormat(code: string): boolean {
     return /^[A-Z0-9]{6}$/.test(code.toUpperCase())
   }
 
-  // Check if room exists and is valid in real-time
-  static async validateRoom(code: string): Promise<{ valid: boolean; message: string; canJoin: boolean; userCount: number }> {
+  // Validate room exists and can be joined
+  static async validateRoom(code: string): Promise<{ 
+    valid: boolean; 
+    message: string; 
+    canJoin: boolean; 
+    userCount: number 
+  }> {
     const upperCode = code.toUpperCase()
     
     if (!this.validateFormat(upperCode)) {
       return {
         valid: false,
-        message: 'Invalid room code format. Must be exactly 6 characters (letters and numbers only).',
+        message: 'Invalid room code format. Must be exactly 6 characters.',
         canJoin: false,
         userCount: 0
       }
     }
 
     try {
-      // Check room in real-time database with detailed logging
-      console.log(`Validating room code: ${upperCode}`)
-      const validation = await (supabase as any).validateRoom(upperCode)
+      console.log(`🔍 Validating room: ${upperCode}`)
+      const validation = (supabase as any).validateRoom(upperCode)
       
-      console.log('Validation result:', validation)
+      console.log('✅ Validation result:', validation)
       
       if (!validation.exists) {
         return {
           valid: false,
-          message: validation.message || `Room "${upperCode}" not found. Please check the code or create a new room.`,
+          message: `Room "${upperCode}" not found. Please check the code.`,
           canJoin: false,
           userCount: 0
         }
@@ -39,7 +42,7 @@ export class RoomValidationService {
       if (!validation.canJoin) {
         return {
           valid: false,
-          message: validation.message || `Room "${upperCode}" is full (${validation.userCount}/2 users). Please try another room.`,
+          message: validation.message,
           canJoin: false,
           userCount: validation.userCount
         }
@@ -47,56 +50,44 @@ export class RoomValidationService {
 
       return {
         valid: true,
-        message: validation.message || `Room ${upperCode} is available`,
+        message: `Room ${upperCode} is available (${validation.userCount}/2 users)`,
         canJoin: true,
         userCount: validation.userCount
       }
     } catch (error) {
-      console.error('Room validation error:', error)
+      console.error('❌ Room validation error:', error)
       return {
         valid: false,
-        message: 'Failed to validate room. Please check your connection and try again.',
+        message: 'Failed to validate room. Please try again.',
         canJoin: false,
         userCount: 0
       }
     }
   }
 
-  // Generate a new secure room code
-  static generateRoomCode(): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-    let result = ''
-    
-    const array = new Uint8Array(6)
-    crypto.getRandomValues(array)
-    
-    for (let i = 0; i < 6; i++) {
-      result += chars.charAt(array[i] % chars.length)
-    }
-    
-    return result
-  }
-
-  // Create a new room with enhanced error handling
-  static async createRoom(userId: string): Promise<{ roomCode: string; success: boolean; message: string }> {
+  // Create a new room
+  static async createRoom(userId: string, userName: string): Promise<{ 
+    roomCode: string; 
+    success: boolean; 
+    message: string 
+  }> {
     try {
-      console.log(`Creating room for user: ${userId}`)
+      console.log(`🏗️ Creating room for user: ${userId} (${userName})`)
       
-      // Create room in database
-      const result = await (supabase as any).createRoom(userId)
+      const result = (supabase as any).createRoom(userId, userName)
       
-      console.log('Create room result:', result)
+      console.log('✅ Create room result:', result)
       
       if (result.error) {
         return {
           roomCode: '',
           success: false,
-          message: result.error.message || 'Failed to create room. Please try again.'
+          message: result.error.message || 'Failed to create room'
         }
       }
 
       const roomCode = result.data.roomCode
-      console.log(`Successfully created room: ${roomCode}`)
+      console.log(`🎉 Successfully created room: ${roomCode}`)
 
       return {
         roomCode,
@@ -104,23 +95,26 @@ export class RoomValidationService {
         message: `Room ${roomCode} created successfully!`
       }
     } catch (error) {
-      console.error('Create room error:', error)
+      console.error('❌ Create room error:', error)
       return {
         roomCode: '',
         success: false,
-        message: 'Failed to create room. Please check your connection.'
+        message: 'Failed to create room. Please try again.'
       }
     }
   }
 
-  // Join an existing room with enhanced validation
-  static async joinRoom(roomCode: string, userId: string): Promise<{ success: boolean; message: string }> {
+  // Join an existing room
+  static async joinRoom(roomCode: string, userId: string, userName: string): Promise<{ 
+    success: boolean; 
+    message: string 
+  }> {
     try {
-      console.log(`User ${userId} attempting to join room: ${roomCode}`)
+      console.log(`👥 User ${userId} (${userName}) joining room: ${roomCode}`)
       
-      const result = await (supabase as any).joinRoom(roomCode.toUpperCase(), userId)
+      const result = (supabase as any).joinRoom(roomCode.toUpperCase(), userId, userName)
       
-      console.log('Join room result:', result)
+      console.log('✅ Join room result:', result)
       
       if (result.error) {
         return {
@@ -134,28 +128,23 @@ export class RoomValidationService {
         message: `Successfully joined room ${roomCode.toUpperCase()}`
       }
     } catch (error) {
-      console.error('Join room error:', error)
+      console.error('❌ Join room error:', error)
       return {
         success: false,
-        message: 'Failed to join room. Please check your connection.'
+        message: 'Failed to join room. Please try again.'
       }
     }
   }
 
-  // Debug function to get all rooms
+  // Debug function
   static async debugGetAllRooms() {
     try {
       const result = (supabase as any).getAllRooms()
-      console.log('All rooms:', result)
+      console.log('🐛 All rooms debug:', result)
       return result
     } catch (error) {
-      console.error('Error getting all rooms:', error)
-      return { rooms: [], activeRooms: [], count: 0 }
+      console.error('❌ Error getting all rooms:', error)
+      return { rooms: [], count: 0, listeners: 0 }
     }
-  }
-
-  // No demo codes in production
-  static getValidCodes(): string[] {
-    return []
   }
 }
